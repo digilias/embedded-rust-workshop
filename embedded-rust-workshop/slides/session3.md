@@ -131,4 +131,3 @@ let mpu = Mpu6050::new(i2c_dev2);
 
 * Implement a driver using the `device-driver` for the rotary encoder
 * Example skeleton can be found in the session3 folder
-
