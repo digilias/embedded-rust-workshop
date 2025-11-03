@@ -50,9 +50,8 @@ color: #333
   * Because most interrupts are only known by the PAC
 
 ---
-# Exercise
+# Excercise 
 
 * Create an interrupt handler for the `EXTI0` interrupt
 * Use stm32-metapac and cortex-m (NVIC) to setup and react to gpio interrupt
 * Support enabling/clearing interrupts in the device-driver
-
