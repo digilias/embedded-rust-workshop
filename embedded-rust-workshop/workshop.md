@@ -1,0 +1,253 @@
+# Embedded Rust Workshop
+
+We'll build and improve an embedded application that:
+
+* Reads data from an I2C sensor
+* Logs data and events using RTT/defmt
+* Uses async/await to take advantage of unique Rust features.
+* Demonstrates safe patterns and C interoperability
+* Serves sensor data over TCP/IP using the onboard Ethernet
+
+The idea is to evolve the application through the sessions, starting with basics and ending up with an async application. By the end of the workshop, participants should be able to: 
+
+1. Set up and configure embedded rust projects for stm32
+2. Understand the differences between the PAC, HAL, and applying the appropriate abstractions.
+3. Writing platform-agnostic drivers using embedded-hal and device-driver crates
+4. Understand how and when to use async in embedded
+5. Integrate with C libraries when needed
+6. Apply proper logging, error handling, and testing strategies
+7. Writing network code with embassy-net
+
+## Equipment
+
+* stm32h5 Nucleo boards (1 per participant)
+* I2C environmental sensors (SHT30/SHT40 maybe?)
+* Breadboards and wires
+* Ethernet cables
+* Network switch
+* Raspberry Pi to represent 'the cloud'.
+
+## Prerequisites
+
+Participants are expected to be familiar with these concepts:
+* How to build using cargo
+* How to create a Cargo.toml
+* Using structs, enums and traits
+* Pattern matching
+* Error handling with Result
+
+Participants can read up on and learn the above following these guides:
+
+* https://rust-lang.org/learn/get-started/
+* https://rustlings.rust-lang.org/
+* https://doc.rust-lang.org/stable/book/
+
+Participants are expected to have the following tools installed:
+
+* rustup - https://rustup.rs/ - it's important to install rust using rustup because we need rustup for additional tools
+* probe-rs https://probe.rs/ - remember to setup the correct permissions as described in https://probe.rs/docs/getting-started/probe-setup/
+* ARM gcc toolchain (for building C library and various tools)
+
+
+## Software
+
+* Workshop repository with example skeleton code
+* Example solutions for each session
+
+## Documentation
+
+* Embassy cheat sheets
+* Common error solutions
+
+## Sessions
+
+Each session is separated by a 15 minute break (except the lunch break of ~1 hour). We go through the sessions in order, so we cover as much as possible the first day, and continue on the second day.
+
+Covering all of the topics might be too ambitious, but we can speed up or skip some sessions depending on participant feedback.
+
+## Session 1: Foundation (Before workshop)
+
+**Goal:** Setting up project and getting a simple blinky example to run. 
+
+**Theory** Embedded Rust vs Regular Rust
+
+* Memory constraints and #![no_std]
+* Ownership and alloc in embedded
+* Project structure and cargo 
+
+**Practice:** Project setup and basic GPIO
+
+* Set up a rust project for stm32h5
+* Verify toolchain and probe setup
+* Blink LED using direct register access (PAC)
+
+## Session 2: PAC
+
+**Goal:** Introducing using peripherals with the Peripheral Access Crate (PAC) concept and using that to work with registers.
+
+**Theory:** PAC vs HAL
+
+* Register-level programming with stm32-metapac
+
+**Practice:** I2C with PAC
+
+* Configure I2C peripheral using stm32-metapac
+* Implement basic I2C read/write operations
+* Read device ID from I2C sensor
+
+## Session 3: Platform-Agnostic Drivers with embedded-hal
+
+**Goal:** Using embedded-hal + device-driver to create generic device drivers.
+
+**Theory:** embedded-hal
+
+* Traits for hardware abstraction
+* Writing portable drivers
+* Driver ecosystem (device-driver crate)
+
+**Practice:** Generic I2C driver
+
+* Refactor I2C code to use embedded-hal traits
+* Create reusable sensor driver using device-driver crate
+* Test driver with mock implementation
+
+## Session 4: Using HAL for programming
+
+**Goal:** Using embassy-stm32 as HAL for the device-driver application.
+
+**Theory:** embassy-stm32
+
+* High-level peripheral drivers
+* Timers and delays
+
+**Practice:** I2C with embassy-stm32
+
+* Migrate application to embassy-stm32 HAL
+* Add periodic sensor polling
+
+## Session 5: Handling interrupts
+
+**Goal:** How to setup interrupts for the i2c sensor and reacting to it.
+
+**Theory:** How interrupts are defined and handled
+
+* Introducing the macros from cortex-m
+
+**Practice:** Handling sensor interrupts
+
+* Using cortex-m-rt crate to define interrupt handlers
+
+## Session 6: Async Fundamentals
+
+**Goal:** Understanding how async works.
+
+**Theory:** Understanding async
+
+* Futures, tasks, and executors
+* Async vs interrupts vs threads
+* Building a minimal executor from scratch
+
+**Practice:** Simple executor implementation
+
+* Write basic executor from scratch
+* Understand waker mechanics
+
+## Session 7: Embassy executor
+
+**Goal:*** Understanding the embassy executor
+
+**Theory:** How the executor works
+
+* Sleeping and waking
+* Priorities and deadline
+* System timer
+
+**Practice:** Refactor application to use embassy-executor
+
+* Implement async sensor polling task
+* Add async delays and timeouts
+
+## Session 8: Handling interrupts with async
+
+**Goal:** Understand how to combine async with interrupts
+
+**Theory:** Creating wakers and manual future implementations
+
+**Practice:** Modifying application to use async API for sensor
+
+## Session 9: Executor and preemption
+
+**Goal**: Understanding how to use multiple executors
+
+**Theory**: Using multiple executors
+
+* NoopRawMutex vs ThreadRawMutex vs CriticalSectionRawMutex
+* Send, Sync and how the compiler helps us make the correct choice
+
+**Practice**: Defining a higher priority task running on another executor.
+
+## Session 10: Synchronization patterns
+
+**Goal:** Introducing different ways to communicate between tasks
+
+**Theory:** Data synchronization
+
+* Mutexes, channels, and signals
+* Critical sections and atomic operations
+
+**Practice:** Task communication
+
+* Add data sharing between tasks
+* Implement producer-consumer with channels
+
+
+## Session 12: Panicking, logging and debugging
+
+**Goal:** How to customize panic handlers and how logging works.
+
+**Theory:** Panic/exception handler and defmt 
+
+* How RTT works
+* How defmt works
+
+**Practice:** Creating a custom panic handler
+
+* Defining a custom panic handler
+* Save some state in panic handler
+* Log panicked state in startup
+
+## Session 13: Wrapping C
+
+**Goals:** Wrapping an existing C library.
+
+**Theory:** Unsafe & wrapping C
+
+* When unsafe is necessary/appropriate
+* Using bindgen for C library integration
+
+**Practice:** C Library Integration
+
+* Create bindings for a C math library
+* Safely interface with C code
+* Handle C-style error codes and memory management
+
+## Session 14: Networking
+
+**Goal:** Using the TCP/IP stack in embassy.
+
+**Theory:** embassy-net and smoltcp
+
+* TCP/IP stack overview
+* Writing networking drivers
+* Control + runner pattern
+
+**Practice:** reporting sensor data to 'the cloud'
+
+* Add support for networking with embassy-net
+* Publish sensor data over TCP
+
+## Additional sessions if time left
+
+* Testing
+* Embassy-boot and OTA
+* Tuning/profiling async
