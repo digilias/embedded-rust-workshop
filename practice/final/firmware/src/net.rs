@@ -2,7 +2,7 @@ use crate::board::{NetResources, Irqs};
 
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_net::tcp::TcpSocket;
+use embassy_net::tcp::{client::{TcpClient, TcpClientState, TcpConnection}};
 use embassy_net::{Stack, StackResources};
 use embassy_stm32::eth::{Ethernet, GenericPhy, PacketQueue};
 use embassy_stm32::peripherals::ETH;
@@ -15,11 +15,23 @@ pub struct Net {
     stack: Stack<'static>,
 }
 
-impl Net {
-    pub fn socket<'a>(&self, rx: &'a mut [u8], tx: &'a mut [u8]) -> TcpSocket<'a> {
-        let mut socket = TcpSocket::new(self.stack, rx, tx);
-        socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
-        socket
+// We can make 2 TCP connections
+pub type Client = TcpClient<'static, 2, 2048, 2048>;
+pub type Connection<'d> = TcpConnection<'d, 2, 2048, 2048>;
+
+pub struct ClientState {
+    state: TcpClientState<2, 2048, 2048>,
+}
+
+impl ClientState {
+    pub fn new() -> ClientState {
+        Self {
+            state: TcpClientState::new(),
+        }
+    }
+
+    pub fn bind(&'static mut self, net: Net) -> Client {
+        TcpClient::new(net.stack, &self.state)
     }
 }
 

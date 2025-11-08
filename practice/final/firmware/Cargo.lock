@@ -730,6 +730,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3964d73d6cdac4d06e733062301986c87b33f35c3b5be03f61f93b25277fa33"
 dependencies = [
  "accelerometer",
+ "defmt 0.3.100",
  "embedded-hal-async",
  "num_enum",
 ]
@@ -1445,7 +1446,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "workshop-final"
+name = "workshop-firmware"
 version = "0.1.0"
 dependencies = [
  "assign-resources",
