@@ -1,9 +1,10 @@
-use embassy_stm32::{bind_interrupts, eth, i2c, peripherals, rng, Config, Peri};
+use assign_resources::assign_resources;
 use embassy_stm32::rcc::{
-    AHBPrescaler, APBPrescaler, Hse, HseMode, Pll, PllDiv, PllMul, PllPreDiv, PllSource, Sysclk, VoltageScale,
+    AHBPrescaler, APBPrescaler, Hse, HseMode, Pll, PllDiv, PllMul, PllPreDiv, PllSource, Sysclk,
+    VoltageScale,
 };
 use embassy_stm32::time::Hertz;
-use assign_resources::assign_resources;
+use embassy_stm32::{bind_interrupts, eth, i2c, peripherals, rng, Config, Peri};
 
 assign_resources! {
     net: NetResources {
@@ -23,6 +24,8 @@ assign_resources! {
         i2c1: I2C1,
         scl: PB8,
         sda: PB9,
+        exti: EXTI5,
+        irq: PA5,
         dma1: GPDMA1_CH4,
         dma2: GPDMA1_CH5,
     }

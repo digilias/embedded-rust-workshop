@@ -14,11 +14,11 @@ mod board;
 async fn main(spawner: Spawner) {
     let board = board::init();
 
-    let net = net::init(board.net, &spawner).await;
-    let xl = xl::init(board.xl).await;
+//    let net = net::init(board.net, &spawner).await;
+    let mut xl = xl::init(board.xl).await;
 
     loop {
-        Timer::after(Duration::from_secs(1)).await;
-        info!("Tick");
+        let sample = xl.sample().await;
+        defmt::info!("sample: {:?}", sample);
     }
 }
