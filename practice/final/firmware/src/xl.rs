@@ -20,7 +20,7 @@ pub struct Accel<I: I2c, IRQ: Wait + InputPin> {
     irq: IRQ,
 }
 
-#[derive(defmt::Format)]
+#[derive(Clone, Copy, defmt::Format)]
 pub struct Sample {
     pub x: f32,
     pub y: f32,
@@ -71,15 +71,25 @@ impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
     }
 
     pub async fn sample(&mut self) -> Result<Sample, Error<I::Error>> {
+        let mut previous: Option<Sample> = None;
         loop {
             let _ = self.irq.wait_for_high().await;
             if let Ok(true) = self.xl.is_data_ready().await {
                 let sample = self.xl.accel_norm().await?;
-                return Ok(Sample {
+                let sample = Sample {
                     x: sample.x,
                     y: sample.y,
                     z: sample.z,
-                })
+                };
+                if let Some(previous) = previous {
+                    const THRESHOLD: f32 = 0.01;
+                    if (previous.x - sample.x).abs() > THRESHOLD ||
+                        (previous.y - sample.y).abs() > THRESHOLD ||
+                        (previous.z - sample.z).abs() > THRESHOLD {
+                        return Ok(sample)
+                    }
+                }
+                previous.replace(sample);
             }
         }
 
