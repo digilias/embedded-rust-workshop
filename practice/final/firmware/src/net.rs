@@ -2,7 +2,7 @@ use crate::board::{NetResources, Irqs};
 
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_net::tcp::{client::{TcpClient, TcpClientState, TcpConnection}};
+use embassy_net::tcp::{self, client::{TcpClient, TcpClientState, TcpConnection}};
 use embassy_net::{Stack, StackResources};
 use embassy_stm32::eth::{Ethernet, GenericPhy, PacketQueue};
 use embassy_stm32::peripherals::ETH;
@@ -18,6 +18,7 @@ pub struct Net {
 // We can make 2 TCP connections
 pub type Client = TcpClient<'static, 2, 2048, 2048>;
 pub type Connection<'d> = TcpConnection<'d, 2, 2048, 2048>;
+pub type Error = tcp::Error;
 
 pub struct ClientState {
     state: TcpClientState<2, 2048, 2048>,

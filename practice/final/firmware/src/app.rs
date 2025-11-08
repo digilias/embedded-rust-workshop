@@ -1,5 +1,6 @@
 use crate::{net, xl};
 use static_cell::StaticCell;
+use embedded_io_async::Write;
 use core::net::{SocketAddr, Ipv4Addr, IpAddr};
 use embedded_nal_async::TcpConnect as _;
 use defmt::*;
@@ -33,7 +34,10 @@ pub async fn run(app: App) {
         match tcp.connect(remote).await {
             Ok(connection) => {
                 info!("Connected to {:?}. Forwarding stream...", remote);
-                forward(stream, connection).await;
+
+                if let Err(e) = forward(stream, connection).await {
+                    warn!("Error while forwarding stream: {:?}", e);
+                }
             }
             Err(e) => {
                 warn!("Failed connecting to {:?}: {:?}", remote, e);
@@ -42,9 +46,14 @@ pub async fn run(app: App) {
     }
 }
 
-async fn forward(stream: xl::SampleStream, _connection: net::Connection<'_>) {
+async fn forward(stream: xl::SampleStream, mut conn: net::Connection<'_>) -> Result<(), net::Error> {
     loop {
         let sample = stream.receive().await;
-        defmt::info!("Forwarding sample: {:?}", sample);
+        info!("Forwarding sample: {:?}", sample);
+
+        let (x, y, z) = (sample.x.to_le_bytes(), sample.y.to_le_bytes(), sample.z.to_le_bytes());
+        conn.write_all(&x).await?;
+        conn.write_all(&y).await?;
+        conn.write_all(&z).await?;
     }
 }
