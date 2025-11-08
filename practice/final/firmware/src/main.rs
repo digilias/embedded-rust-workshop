@@ -17,5 +17,6 @@ async fn main(spawner: Spawner) {
     let stream = unwrap!(xl::init(board.xl, spawner).await);
     let net = net::init(board.net, &spawner).await;
     let app = app::init(stream, net);
+
     spawner.spawn(unwrap!(app::run(app)));
 }

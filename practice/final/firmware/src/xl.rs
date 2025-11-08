@@ -1,5 +1,6 @@
 use embedded_hal_async::i2c::I2c;
 use embedded_hal_async::digital::Wait;
+use embedded_hal::digital::InputPin;
 use lis3dh_async::{Lis3dh, Lis3dhI2C, SlaveAddr, Configuration, Range, Interrupt1, InterruptMode, Mode, DataRate, InterruptConfig, IrqPin1Config, Threshold, Duration, Error};
 use crate::board::{XlResources, Irqs};
 use embassy_stm32::i2c::{I2c as I2cPeripheral, Master};
@@ -14,7 +15,7 @@ use defmt::{unwrap, warn};
 type I2cType = I2cPeripheral<'static, Async, Master>;
 type IrqType = ExtiInput<'static>;
 
-pub struct Accel<I: I2c, IRQ: Wait> {
+pub struct Accel<I: I2c, IRQ: Wait + InputPin> {
     xl: Lis3dh<Lis3dhI2C<I>>,
     irq: IRQ,
 }
@@ -26,19 +27,19 @@ pub struct Sample {
     pub z: f32,
 }
 
-impl<I: I2c, IRQ: Wait> Accel<I, IRQ> {
+impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
     pub async fn new(i2c: I, irq: IRQ) -> Result<Self, Error<I::Error>> {
         let config = Configuration {
-            mode: Mode::Normal,
+            mode: Mode::HighResolution,
             datarate: DataRate::PowerDown,
             ..Configuration::default()
         };
-        let dr = DataRate::Hz_1;
+        let dr = DataRate::Hz_25;
 
         let mut xl = Lis3dh::new_i2c_with_config(i2c, SlaveAddr::Default, config).await?;
 
         // Configure the threshold value for interrupt 1 to 1.1g
-        let threshold = Threshold::g(Range::default(), 1.1);
+        let threshold = Threshold::g(Range::default(), 0.1);
         xl.configure_irq_threshold(Interrupt1, threshold).await?;
 
         // The time in 1/ODR an axis value should be above threshold in order for an
@@ -46,6 +47,13 @@ impl<I: I2c, IRQ: Wait> Accel<I, IRQ> {
         let duration = Duration::miliseconds(dr, 0.0);
         xl.configure_irq_duration(Interrupt1, duration).await?;
 
+        xl.configure_irq_src( //_and_control(
+            Interrupt1,
+            InterruptMode::Movement,
+            InterruptConfig::high_and_low(),
+//            LatchInterruptRequest::Enable,
+//            Detect4D::Enable,
+        ).await?;
 
         // Raise pin state if interrupt 1 is raised and there is movement
         xl.configure_interrupt_pin(IrqPin1Config {
@@ -54,26 +62,27 @@ impl<I: I2c, IRQ: Wait> Accel<I, IRQ> {
             ..IrqPin1Config::default()
         }).await?;
 
-        xl.configure_irq_src(
-            Interrupt1,
-            InterruptMode::Movement,
-            InterruptConfig::high_and_low(),
-        ).await?;
+//        let duration = Duration::miliseconds(dr, 2.5);
+//        xl.configure_switch_to_low_power(threshold, duration).await?;
+
         xl.set_datarate(dr).await?;
-
-
 
         Ok(Self { xl, irq })
     }
 
     pub async fn sample(&mut self) -> Result<Sample, Error<I::Error>> {
-        let _ = self.irq.wait_for_high().await;
-        let sample = self.xl.accel_norm().await?;
-        Ok(Sample {
-            x: sample.x,
-            y: sample.y,
-            z: sample.z,
-        })
+        loop {
+            let _ = self.irq.wait_for_high().await;
+            if let Ok(true) = self.xl.is_data_ready().await {
+                let sample = self.xl.accel_norm().await?;
+                return Ok(Sample {
+                    x: sample.x,
+                    y: sample.y,
+                    z: sample.z,
+                })
+            }
+        }
+
     }
 }
 
@@ -91,7 +100,7 @@ pub async fn init(p: XlResources, s: Spawner) -> Result<SampleStream, Error<emba
         Default::default(),
     );
 
-    let input = ExtiInput::new(p.irq, p.exti, Pull::Down);
+    let input = ExtiInput::new(p.irq, p.exti, Pull::None);
 
     let xl = Accel::new(i2c, input).await?;
 
