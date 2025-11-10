@@ -31,8 +31,45 @@ color: #333
 # Mutex
 
 * Two variants
-  * Blocking - may deadlock if you hold across await points!
-  * Async - can be held across await points
+  * `embassy_sync::blocking_mutex::Mutex`- blocking API should not be held across await points
+  * `embassy_sync::mutex::Mutex` - async API and can be held across await points
+
+---
+
+# Blocking mutex
+
+```rust
+let guard = m.lock().unwrap(); // Acquires lock
+
+let result = do_foo().await; // <- If this task yields and another task locks the same mutex: deadlock
+
+drop(guard)
+```
+
+# Async mutex
+
+```rust
+let guard = m.lock().await; // Acquires lock
+
+let result = do_foo().await; // <- If this task yields and another task locks the same mutex: other task yields
+
+drop(guard)
+```
+  
+---
+# RawMutex
+
+```rust
+let m: Mutex<NoopRawMutex, T>
+//        whats ^^
+```
+
+* `RawMutex` - Trait defining locking behavior
+  * Use CriticalSectionMutex when data can be shared between threads and interrupts.
+  * Use NoopMutex when data is only shared between tasks running on the same executor.
+  * Use ThreadModeMutex when data is shared between tasks running on the same executor but you want a global singleton.
+  
+* `RawMutex` is used in all data types in `embassy-sync`
 
 ---
 
@@ -48,26 +85,31 @@ color: #333
 
 ---
 
-
-# Blocking Mutex
+# Channel
 
 ```rust
-Mutex<M: RawMutex, T>
+static CHANNEL: Channel<CriticalSectionRawMutex,  u32,            10> = Channel::new();
+//                           ^^ mutex type        ^^ data type    ^^ length
 ```
 
-* `RawMutex` - trait defining the acquire/release semantics
-* `NoopRawMutex` - No guard
+```rust
+let sender: Sender<'_, CriticalSectionRawMutex, u32, 10> = CHANNEL.sender();
+let receiver: Receiver<'_, CriticalSectionRawMutex, u32, 10> = CHANNEL.receiver();
 
----
-
-# Channel
+// If you are ok with dynamic dispatch
+let sender: DynamicSender<'_, u32> = CHANNEL.sender().into();
+let receiver: DynamicReceiver<'_, u32> = CHANNEL.sender().into();
+```
 
 ---
 
 # Signal
 
----
+* Need a container of some data to share from an interrupt
+* Less internal bookkeeping than channel
+* 
 
+---
 
 # Sharing state within executor
 
