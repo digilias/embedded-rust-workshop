@@ -175,18 +175,7 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 
 **Practice:** Modifying application to use async API for sensor
 
-## Session 9: Executor and preemption
-
-**Goal**: Understanding how to use multiple executors
-
-**Theory**: Using multiple executors
-
-* NoopRawMutex vs ThreadRawMutex vs CriticalSectionRawMutex
-* Send, Sync and how the compiler helps us make the correct choice
-
-**Practice**: Defining a higher priority task running on another executor.
-
-## Session 10: Synchronization patterns
+## Session 9: Synchronization patterns
 
 **Goal:** Introducing different ways to communicate between tasks
 
@@ -201,7 +190,19 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 * Implement producer-consumer with channels
 
 
-## Session 12: Panicking, logging and debugging
+## Session 10: Executor and preemption
+
+**Goal**: Understanding how to use multiple executors
+
+**Theory**: Using multiple executors
+
+* NoopRawMutex vs ThreadRawMutex vs CriticalSectionRawMutex
+* Send, Sync and how the compiler helps us make the correct choice
+
+**Practice**: Defining a higher priority task running on another executor.
+
+
+## Session 11: Panicking, logging and debugging
 
 **Goal:** How to customize panic handlers and how logging works.
 
@@ -216,7 +217,7 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 * Save some state in panic handler
 * Log panicked state in startup
 
-## Session 13: Wrapping C
+## Session 12: Wrapping C
 
 **Goals:** Wrapping an existing C library.
 
@@ -231,7 +232,7 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 * Safely interface with C code
 * Handle C-style error codes and memory management
 
-## Session 14: Networking
+## Session 13: Networking
 
 **Goal:** Using the TCP/IP stack in embassy.
 
