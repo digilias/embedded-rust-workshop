@@ -118,6 +118,17 @@ let gpiob = pac::GPIOB;
 ```
 
 ---
+# When to use unsafe
+
+* Dereferencing raw pointers
+* Implementing low-level primitives 
+* Performance-critical sections with manual optimizations
+
+**Key principle:** Minimize unsafe surface area, provide safe abstractions
+
+---
+
+---
 
 # Exercise
 
