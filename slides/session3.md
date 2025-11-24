@@ -14,6 +14,7 @@ color: #333
 ---
 
 # Rust Embedded Working Group
+
 * **Coordinates with Rust Language team**
 * **Maintains a few crates (libraries) that "everyone" uses**
   - **cortex-m/cortex-ar/riscv** - low level access to peripherals
@@ -129,5 +130,7 @@ let mpu = Mpu6050::new(i2c_dev2);
 
 # Exercise
 
-* Implement a driver using the `device-driver` for the rotary encoder
-* Example skeleton can be found in the session3 folder
+* Implement a generic driver for the accelerometer
+* Use `device-driver` crate for extra challenge
+* i2c address: 0x18
+* whoami register: 0x0f

@@ -110,7 +110,7 @@ pub async fn init(p: XlResources, s: Spawner) -> Result<SampleStream, Error<emba
         Default::default(),
     );
 
-    let input = ExtiInput::new(p.irq, p.exti, Pull::None);
+    let input = ExtiInput::new(p.irq, p.exti, Pull::None, Irqs);
 
     let xl = Accel::new(i2c, input).await?;
 

@@ -11,6 +11,9 @@ color: #333
 * **Goal:** How to setup interrupts for the i2c sensor and reacting to it.
 
 ---
+# Back to the basics
+
+---
 # cortex-m-rt
 
 * Provides linker-scripts that simplifies your life
@@ -50,8 +53,8 @@ color: #333
   * Because most interrupts are only known by the PAC
 
 ---
-# Excercise 
+# Exercise 
 
-* Create an interrupt handler for the `EXTI0` interrupt
-* Use stm32-metapac and cortex-m (NVIC) to setup and react to gpio interrupt
-* Support enabling/clearing interrupts in the device-driver
+
+* Create an interrupt handler for the `EXTI5` interrupt on the `PA5` pin
+* Use embassy_stm32::pac and cortex-m (NVIC) to setup and react to gpio interrupt

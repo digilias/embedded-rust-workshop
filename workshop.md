@@ -81,7 +81,7 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 * Verify toolchain and probe setup
 * Blink LED using direct register access (PAC)
 
-## Session 2: PAC
+## Session 2: PAC vs HAL
 
 **Goal:** Introducing using peripherals with the Peripheral Access Crate (PAC) concept and using that to work with registers.
 
@@ -89,7 +89,7 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 
 * Register-level programming with stm32-metapac
 
-**Practice:** I2C with PAC
+**Practice:** I2C with HAL
 
 * Configure I2C peripheral using stm32-metapac
 * Implement basic I2C read/write operations

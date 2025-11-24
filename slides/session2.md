@@ -10,15 +10,6 @@ color: #333
 
 * **Goal:** Introducing using peripherals with the Peripheral Access Crate (PAC) concept and using that to work with registers.
 
-* **Theory:** PAC vs HAL
-  - Register-level programming with stm32-metapac
-
-* **Practice:** I2C with PAC
-  - Configure I2C peripheral using stm32-metapac
-  - Implement basic I2C read/write operations
-  - Read device ID from I2C sensor
-
-
 ---
 # PACs in the wild
 
@@ -105,32 +96,26 @@ stm32-metapac = { version = "18", features = ["stm32h563zi"] }
 * `find target -type f -name pac.rs`
 * Works with IDE completion
 
+---
+
+# General info
 
 ---
 
-# The result
+# The workshop project
 
-```rust
-use stm32_metapac as pac;
-
-let gpiob = pac::GPIOB;
-// TODO
-```
-
----
-# When to use unsafe
-
-* Dereferencing raw pointers
-* Implementing low-level primitives 
-* Performance-critical sections with manual optimizations
-
-**Key principle:** Minimize unsafe surface area, provide safe abstractions
-
----
+* Located in the `practice/workshop` folder
+* We will use this throughout the workshop and update it
+* Contains necessary deps in `Cargo.toml`
+* Help snippets can be found in `practice/workshop` - please use these if you get stuck
+* README.md contains references to relevant docs for each session
 
 ---
 
 # Exercise
 
-* Implement the I2C operation to read the identity register using the stm32-metapac
-* Starting code can be found in session2 folder
+* Start with the workshop project
+* Create an instance of the embassy stm32 HAL
+* Create an instance of i2c
+* Read the who am i register
+* Run on devkit

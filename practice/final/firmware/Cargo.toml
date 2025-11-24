@@ -75,9 +75,9 @@ opt-level = 3 # <-
 overflow-checks = false # <-
 
 [patch.crates-io]
-embassy-executor = { path = "../../../../embassy/embassy-executor" }
-embassy-stm32 = { path = "../../../../embassy/embassy-stm32" }
-embassy-time = { path = "../../../../embassy/embassy-time" }
-embassy-net = { path = "../../../../embassy/embassy-net" }
-embassy-sync = { path = "../../../../embassy/embassy-sync" }
-embassy-usb = { path = "../../../../embassy/embassy-usb" }
+embassy-executor = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6bea6b6e55ba3dfe0f3b86152402e47d3f"}
+embassy-stm32 = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6bea6b6e55ba3dfe0f3b86152402e47d3f"}
+embassy-time = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6bea6b6e55ba3dfe0f3b86152402e47d3f"}
+embassy-net = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6bea6b6e55ba3dfe0f3b86152402e47d3f"}
+embassy-sync = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6bea6b6e55ba3dfe0f3b86152402e47d3f"}
+embassy-usb = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6bea6b6e55ba3dfe0f3b86152402e47d3f"}

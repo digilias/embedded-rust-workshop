@@ -4,12 +4,12 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_net::tcp::{self, client::{TcpClient, TcpClientState, TcpConnection}};
 use embassy_net::{Stack, StackResources};
-use embassy_stm32::eth::{Ethernet, GenericPhy, PacketQueue};
-use embassy_stm32::peripherals::ETH;
+use embassy_stm32::eth::{Ethernet, GenericPhy, PacketQueue, Sma};
+use embassy_stm32::peripherals::{ETH_SMA, ETH};
 use embassy_stm32::rng::Rng;
 use static_cell::StaticCell;
 
-type Device = Ethernet<'static, ETH, GenericPhy>;
+type Device = Ethernet<'static, ETH, GenericPhy<Sma<'static, ETH_SMA>>>;
 
 pub struct Net {
     stack: Stack<'static>,
@@ -50,16 +50,16 @@ pub async fn init(p: NetResources, spawner: &Spawner) -> Net {
         p.eth,
         Irqs,
         p.pa1,
-        p.pa2,
-        p.pc1,
         p.pa7,
         p.pc4,
         p.pc5,
         p.pg13,
         p.pb15,
         p.pg11,
-        GenericPhy::new_auto(),
         mac_addr,
+        p.eth_sma,
+        p.pa2,
+        p.pc1,
     );
 
     // Generate random seed.

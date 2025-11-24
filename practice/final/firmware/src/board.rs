@@ -1,4 +1,5 @@
 use assign_resources::assign_resources;
+use embassy_stm32::exti;
 use embassy_stm32::rcc::{
     AHBPrescaler, APBPrescaler, Hse, HseMode, Pll, PllDiv, PllMul, PllPreDiv, PllSource, Sysclk,
     VoltageScale,
@@ -9,6 +10,7 @@ use embassy_stm32::{bind_interrupts, eth, i2c, peripherals, rng, Config, Peri};
 assign_resources! {
     net: NetResources {
         eth: ETH,
+        eth_sma: ETH_SMA,
         pa1: PA1,
         pa2: PA2,
         pc1: PC1,
@@ -41,6 +43,7 @@ bind_interrupts!(pub struct Irqs {
     I2C1_ER => i2c::ErrorInterruptHandler<peripherals::I2C1>;
     ETH => eth::InterruptHandler;
     RNG => rng::InterruptHandler<peripherals::RNG>;
+    EXTI5 => exti::InterruptHandler<embassy_stm32::interrupt::typelevel::EXTI5>;
 });
 
 pub fn init() -> Board {

@@ -6,7 +6,7 @@ backgroundColor: #fff
 color: #333
 ---
 
-# Session 4: Using HAL for programming
+# Session 4: More on HAL
 
 *  **Goal:** Using embassy-stm32 as HAL for the device-driver application.
 
@@ -63,8 +63,5 @@ color: #333
 ---
 # Exercise
 
-* Migrate application to embassy-stm32 HAL
-  * Replace I2C implementation with embassy-stm32 I2C implementation
-
-* Add periodic sensor polling
-  * Extend device-driver implementation to support reading sensor value
+* Extend driver to support reading sensor value
+* Add periodic sensor polling using embassy-time

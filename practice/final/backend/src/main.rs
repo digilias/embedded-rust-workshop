@@ -40,11 +40,11 @@ async fn main() {
 }
 
 async fn tcp_server(clients: ClientData) {
-    let listener = TcpListener::bind("10.10.162.120:8080")
+    let listener = TcpListener::bind("0.0.0.0:8080")
         .await
         .expect("Failed to bind TCP listener");
 
-    log::info!("TCP server listening on 10.10.162.120:8080");
+    log::info!("TCP server listening on 0.0.0.0:8080");
 
     loop {
         match listener.accept().await {
