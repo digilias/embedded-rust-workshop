@@ -55,7 +55,6 @@ color: #333
 ---
 # Exercise 
 
-
 * Create an interrupt handler for the `EXTI13` interrupt on the `PC13` pin
-* Setup the pin using embassy_stm32::gpio 
-* Use embassy_stm32::pac and cortex-m (NVIC) to setup and react to gpio interrupt
+* Setup the pin using embassy_stm32::gpio::Input (to configure it)
+* Use embassy_stm32::pac and the EXTI peripheral and to setup and react to gpio interrupt

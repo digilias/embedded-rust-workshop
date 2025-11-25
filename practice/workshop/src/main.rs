@@ -44,6 +44,7 @@ fn main() -> ! {
     EXTI.fpr(0).write(|w| w.set_line(pin, true));
     EXTI.imr(0).modify(|w| w.set_line(pin, true));
 
+    let executor = SimpleExecutor::new();
     loop {}
 }
 
@@ -122,3 +123,46 @@ device_driver::create_device!(
         },
     }
 );
+
+pub struct SimpleExecutor;
+impl SimpleExecutor {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    /// Run a single future to completion
+    pub fn block_on<F: Future>(&mut self, mut future: F) -> F::Output {
+        // Pin the future
+        let mut future = unsafe { Pin::new_unchecked(&mut future) };
+
+        // Create a dummy waker
+        let waker = dummy_waker();
+        let mut context = Context::from_waker(&waker);
+
+        // Poll until ready
+        loop {
+            match future.as_mut().poll(&mut context) {
+                Poll::Ready(output) => return output,
+                Poll::Pending => {
+                    // In a real executor, we'd sleep or wait for events
+                    // For this simple version, we just loop (busy-wait)
+                }
+            }
+        }
+    }
+}
+
+fn dummy_waker() -> Waker {
+    unsafe { Waker::from_raw(dummy_raw_waker()) }
+}
+
+fn dummy_raw_waker() -> RawWaker {
+    fn no_op(_: *const ()) {}
+    fn clone(_: *const ()) -> RawWaker {
+        dummy_raw_waker()
+    }
+
+    static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, no_op, no_op, no_op);
+
+    RawWaker::new(core::ptr::null(), &VTABLE)
+}
