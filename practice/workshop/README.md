@@ -36,3 +36,5 @@ device_driver::create_device!(
 * https://crates.io/crates/cortex-m-rt
 * https://docs.rs/cortex-m/0.7.7/cortex_m/peripheral/struct.NVIC.html
 * https://docs.embassy.dev/embassy-stm32/git/stm32h563zi/gpio/index.html
+* PIN: 13
+* PORT: 2
