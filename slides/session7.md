@@ -98,4 +98,14 @@ async fn my_task_inner(mut button: ExtiInput, mut led: Output) {
 }
 ```
 
+* Problem: using generics in statics
+* Solution: clever use of const and macros to figure out the type
+
+---
+# What alternatives are there?
+
+* RTIC
+* smol
+* ... your own?
+
 ---

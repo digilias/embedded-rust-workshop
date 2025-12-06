@@ -98,20 +98,6 @@ stm32-metapac = { version = "18", features = ["stm32h563zi"] }
 
 ---
 
-# General info
-
----
-
-# The workshop project
-
-* Located in the `practice/workshop` folder
-* We will use this throughout the workshop and update it
-* Contains necessary deps in `Cargo.toml`
-* Help snippets can be found in `practice/workshop` - please use these if you get stuck
-* README.md contains references to relevant docs for each session
-
----
-
 # Exercise
 
 * Start with the workshop project

@@ -96,7 +96,7 @@ static CHANNEL: Channel<CriticalSectionRawMutex,  u32,            10> = Channel:
 let sender: Sender<'_, CriticalSectionRawMutex, u32, 10> = CHANNEL.sender();
 let receiver: Receiver<'_, CriticalSectionRawMutex, u32, 10> = CHANNEL.receiver();
 
-// If you are ok with dynamic dispatch
+// If you want dynamic dispatch
 let sender: DynamicSender<'_, u32> = CHANNEL.sender().into();
 let receiver: DynamicReceiver<'_, u32> = CHANNEL.sender().into();
 ```
@@ -113,12 +113,24 @@ let receiver: DynamicReceiver<'_, u32> = CHANNEL.sender().into();
 
 # Sharing state within executor
 
+* NoopRawMutex - pass lock to different tasks
+* ThreadModeRawMutex - can store in global but only pass to tasks on same executor
+
 ---
 
 # Sharing state with interrupts
+
+* CriticalSectionRawMutex
+* 
 
 ---
 # Sharing global state
 
 ---
 # Beware
+
+---
+# Exercise
+
+* Refactor code that polls for accelerometer data and share it via a channel
+* Create another task that consumes data and logs it

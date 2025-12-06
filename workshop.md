@@ -1,6 +1,6 @@
 # Embedded Rust Workshop
 
-We'll build and improve an embedded application that:
+We'll start from scratch with blinky, then build and improve an embedded application that:
 
 * Reads data from an I2C sensor
 * Logs data and events using RTT/defmt
@@ -18,11 +18,10 @@ The idea is to evolve the application through the sessions, starting with basics
 6. Apply proper logging, error handling, and testing strategies
 7. Writing network code with embassy-net
 
-## Equipment
+## Equipment we will use
 
-* stm32h5 Nucleo boards (1 per participant)
-* I2C environmental sensors (SHT30/SHT40 maybe?)
-* Breadboards and wires
+* stm32h563zi nucleo boards (1 per participant)
+* I2C accelerometer + wires
 * Ethernet cables
 * Network switch
 * Raspberry Pi to represent 'the cloud'.
@@ -30,11 +29,9 @@ The idea is to evolve the application through the sessions, starting with basics
 ## Prerequisites
 
 Participants are expected to be familiar with these concepts:
-* How to build using cargo
-* How to create a Cargo.toml
+* How to build using the cargo tool
+* The basics of the Cargo.toml manifest
 * Using structs, enums and traits
-* Pattern matching
-* Error handling with Result
 
 Participants can read up on and learn the above following these guides:
 
@@ -48,6 +45,11 @@ Participants are expected to have the following tools installed:
 * probe-rs https://probe.rs/ - remember to setup the correct permissions as described in https://probe.rs/docs/getting-started/probe-setup/
 * ARM gcc toolchain (for building C library and various tools)
 
+See you on January 29th. If there any questions or special requirements in advance, feel free to reach me at ulf@digili.no
+
+Best regards,
+
+Ulf
 
 ## Software
 
@@ -61,9 +63,9 @@ Participants are expected to have the following tools installed:
 
 ## Sessions
 
-Each session is separated by a 15 minute break (except the lunch break of ~1 hour). We go through the sessions in order, so we cover as much as possible the first day, and continue on the second day.
+Each session is separated by a short break (except the lunch break). We go through the sessions in order, so we cover as much as possible the first day, and continue on the second day.
 
-Covering all of the topics might be too ambitious, but we can speed up or skip some sessions depending on participant feedback.
+Covering all of the topics might be too ambitious, but we can speed up or skip some sessions depending on feedback underway.
 
 ## Session 1: Foundation (Before workshop)
 
@@ -252,3 +254,19 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 * Testing
 * Embassy-boot and OTA
 * Tuning/profiling async
+
+
+TODO:
+
+* Session 7: Some more theory and practice
+* Session 8: Using futures with interrupts, practice
+* Session 9: Finish theory and think of practice code with tasks and data flow
+* Session 10: No practice? 
+* Session 11: Summery in slide + debug slide. Practice code
+* Session 12: Summary in slide + practice C library
+* Session 13: Summary in slide + practice code.
+
+
+* Sending out info in January:
+
+* PDF with intro and first session1 - links to github

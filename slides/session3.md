@@ -130,7 +130,7 @@ let mpu = Mpu6050::new(i2c_dev2);
 
 # Exercise
 
-* Implement a generic driver for the accelerometer
+* Implement a generic driver for the accelerometer 
 * Use `device-driver` crate for extra challenge
 * i2c address: 0x18
 * whoami register: 0x0f

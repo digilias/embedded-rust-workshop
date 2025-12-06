@@ -47,12 +47,10 @@ impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
         let duration = Duration::miliseconds(dr, 0.0);
         xl.configure_irq_duration(Interrupt1, duration).await?;
 
-        xl.configure_irq_src( //_and_control(
+        xl.configure_irq_src(
             Interrupt1,
             InterruptMode::Movement,
             InterruptConfig::high_and_low(),
-//            LatchInterruptRequest::Enable,
-//            Detect4D::Enable,
         ).await?;
 
         // Raise pin state if interrupt 1 is raised and there is movement
@@ -61,9 +59,6 @@ impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
             zyxda_en: true,
             ..IrqPin1Config::default()
         }).await?;
-
-//        let duration = Duration::miliseconds(dr, 2.5);
-//        xl.configure_switch_to_low_power(threshold, duration).await?;
 
         xl.set_datarate(dr).await?;
 
