@@ -259,11 +259,9 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 
 TODO:
 
-* Session 7: Some more theory and practice
-* Session 8: Using futures with interrupts, practice
-* Session 9: Finish theory and think of practice code with tasks and data flow
-* Session 10: No practice? 
-* Session 11: Summery in slide + debug slide. Practice code
+* Session 9: Create practice code with tasks and data flow
+* Session 10: Practice code to setup XL and use IRQ pin + references in readme
+* Session 11: Summary in slide + debug slide. Practice code
 * Session 12: Summary in slide + practice C library
 * Session 13: Summary in slide + practice code.
 

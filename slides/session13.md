@@ -195,5 +195,3 @@ info!("Resolved to: {:?}", address);
 * Configure embassy-net with DHCP
 * Create TCP client to send xl data (3xf32 as little endian)
 * Send accelerometer readings
-
-Starting code in `practice/session13`
