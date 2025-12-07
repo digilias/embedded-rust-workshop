@@ -91,4 +91,22 @@ EXECUTOR_LOW.start(interrupt::EGU1_SWI1).spawn(low_prio().unwrap());
 # Exercises
 
 * Setup the lis3dh accelerometer to use IRQ pin
+
+  ```rust
+  let duration = Duration::miliseconds(dr, 0.0);
+  xl.configure_irq_duration(Interrupt1, duration).await?;
+
+  xl.configure_irq_src(
+      Interrupt1,
+      InterruptMode::Movement,
+      InterruptConfig::high_and_low(),
+  ).await?;
+
+  xl.configure_interrupt_pin(IrqPin1Config {
+      ia1_en: true,
+      zyxda_en: true,
+      ..IrqPin1Config::default()
+  }).await?;
+  ```
+
 * Instead of sampling periodically - use IRQ pin

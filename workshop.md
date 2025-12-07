@@ -259,8 +259,6 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 
 TODO:
 
-* Session 9: Create practice code with tasks and data flow
-* Session 10: Practice code to setup XL and use IRQ pin + references in readme
 * Session 11: Summary in slide + debug slide. Practice code
 * Session 12: Summary in slide + practice C library
 * Session 13: Summary in slide + practice code.

@@ -152,5 +152,22 @@ let receiver: DynamicReceiver<'_, u32> = CHANNEL.sender().into();
 # Exercise
 
 * Remove button logic
+
+* Create channel for sharing accelerometer samples from one task to another
+  ```rust
+  static CHANNEL: Channel<ThreadModeRawMutex, Sample, 10> = Channel::new();
+  ```
+
 * Create 1 task for reading the accelerometer data periodically (use system timer!) and publish to a channel
+
+  ```rust
+  #[embassy_executor::task]
+  async fn producer(mut xl: Lis3dh<Lis3dhI2C<I2c<'static, Async, i2c::Master>>>, sender: Sender<'static, ThreadModeRawMutex, Sample, 10>) {}
+  ```
+
 * Create 1 task for consuming from a channel and log the data
+
+  ```rust
+  #[embassy_executor::task]
+  async fn consumer(receiver: Receiver<'static, ThreadModeRawMutex, Sample, 10>) {}
+  ```

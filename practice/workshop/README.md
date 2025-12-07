@@ -62,3 +62,41 @@ device_driver::create_device!(
 
 * https://docs.embassy.dev/embassy-sync/git/default/channel/struct.Channel.html
 * https://docs.embassy.dev/embassy-time/git/default/struct.Timer.html
+* https://docs.rs/lis3dh-async/latest/lis3dh_async/struct.Lis3dh.html#method.accel_raw
+
+```rust
+
+  static CHANNEL: Channel<ThreadModeRawMutex, Sample, 10> = Channel::new();
+  #[embassy_executor::task]
+  async fn producer(mut xl: Lis3dh<Lis3dhI2C<I2c<'static, Async, i2c::Master>>>, sender: Sender<'static, ThreadModeRawMutex, Sample, 10>) {}
+
+  #[embassy_executor::task]
+  async fn consumer(receiver: Receiver<'static, ThreadModeRawMutex, Sample, 10>) {}
+```
+
+## Session 10
+
+* https://docs.rs/lis3dh-async/latest/lis3dh_async/struct.Lis3dh.html#method.configure_interrupt_pin
+* https://docs.rs/lis3dh-async/latest/lis3dh_async/struct.Lis3dh.html#method.configure_irq_src
+
+  ```rust
+  let duration = Duration::miliseconds(dr, 0.0);
+  xl.configure_irq_duration(Interrupt1, duration).await?;
+
+  xl.configure_irq_src(
+      Interrupt1,
+      InterruptMode::Movement,
+      InterruptConfig::high_and_low(),
+  ).await?;
+
+  xl.configure_interrupt_pin(IrqPin1Config {
+      ia1_en: true,
+      zyxda_en: true,
+      ..IrqPin1Config::default()
+  }).await?;
+  ```
+## Session 11 
+
+## Session 12
+
+## Session 13
