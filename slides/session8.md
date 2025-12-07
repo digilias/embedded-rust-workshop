@@ -102,6 +102,42 @@ async fn my_task_inner(mut button: ExtiInput, mut led: Output) {
 * Solution: clever use of const and macros to figure out the type
 
 ---
+# SimpleExecutor vs Embassy Executor
+
+* Task macros to "build" task list
+* Sleep/wakeup mechanism
+* Priorities and deadlines
+* Metadata
+* System timer
+* ...
+
+---
+# Integration with HAL - system timer
+
+* `embassy-time` - Timer API
+  * `Instant` - current time
+  * `Duration` - time duration
+  * `Timer` - for delaying
+* `embassy-time-driver` - integration with `embassy-executor`
+  * Time driver creates "alarms" that wake the executor
+
+---
+# Integration with HAL - interrupts
+
+* How do we prevent conflicting interrupt handling?
+
+* ```rust
+  bind_interrupts!(pub struct Irqs {
+      I2C1_EV => i2c::EventInterruptHandler<peripherals::I2C1>;
+      I2C1_ER => i2c::ErrorInterruptHandler<peripherals::I2C1>;
+      EXTI13 => exti::InterruptHandler<embassy_stm32::interrupt::typelevel::EXTI13>;
+  });
+  ```
+
+* `Irqs` is passed to the HAL when necessary to document the contract
+* You cannot both use the `interrupt` macro and `bind_interrupts` with the same interrupt!
+
+---
 # What alternatives are there?
 
 * RTIC
@@ -145,25 +181,27 @@ mod app {
 ```
 
 ---
-# Metrics
+# Code size 
 
-* Code size
-  * Executor::run - 316B
-  * Executor::run (feature = turbowakers) - 286B
-  * Waker - 214B
-  * Total - 500-530B
+* Executor::run - 316B
+* Executor::run (feature = turbowakers) - 286B
+* Waker - 214B
+* Total - 500-530B
   
-* Execution speed
-  * Cycles per poll: 78-91 
+---
+# Speed
 
-* RAM
-  * Task stack is perfectly sizedPerfectly sized stack
-  * Per-task executor state (13 bytes):
-    * Task state: 1 byte
-    * Executor ptr: 4 bytes
-    * Run queue item: 4 bytes
-    * Time queue item (optional): 4 bytes
-    * Metadata: 0+ bytes
+* Cycles per poll: 78-91 
+
+---
+# RAM
+* Task stack is perfectly sized
+* Per-task executor state (13 bytes):
+  * Task state: 1 byte
+  * Executor ptr: 4 bytes
+  * Run queue item: 4 bytes
+  * Time queue item (optional): 4 bytes
+  * Metadata: 0+ bytes
 
 ---
 # Philosophy of embassy
@@ -175,10 +213,10 @@ mod app {
 * Important metrics: code size, execution time and ram usage
 
 ---
+# Exercise - time to simplify!
 
-# Exercise
-
-* Remove simple loop executor
-* Use embassy executor for main
-* 
-* Add async delays and timeouts
+1. Refactor and replace simple loop executor with embassy main
+2. Try running your program again (it should work without modifications!)
+3. Replace our own lis3dh-driver with the one from lis3dh-async 
+4. Try running your program again
+5. Replace interrupt code with `ExtiInput` from `embassy-stm32`

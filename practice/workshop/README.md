@@ -48,3 +48,17 @@ device_driver::create_device!(
 
 * https://doc.rust-lang.org/core/future/trait.Future.html#tymethod.poll
 * https://docs.embassy.dev/embassy-sync/git/default/waitqueue/struct.AtomicWaker.html
+
+## Session 8
+
+* https://github.com/embassy-rs/embassy/blob/main/examples/stm32h5/src/bin/blinky.rs#L10-L11
+
+* https://docs.rs/lis3dh-async/0.9.3/lis3dh_async/trait.Lis3dhCore.html#tymethod.read_register
+* https://docs.rs/lis3dh-async/0.9.3/lis3dh_async/enum.Register.html
+
+* https://docs.embassy.dev/embassy-stm32/git/stm32h563zi/exti/struct.ExtiInput.html
+
+## Session 9
+
+* https://docs.embassy.dev/embassy-sync/git/default/channel/struct.Channel.html
+* https://docs.embassy.dev/embassy-time/git/default/struct.Timer.html

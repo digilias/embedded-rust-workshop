@@ -1,51 +1,27 @@
-// Session 7 Snippet: Embassy Executor Tasks
-
-use embassy_executor::Spawner;
-use embassy_time::{Duration, Timer};
-use defmt::info;
+bind_interrupts!(pub struct Irqs {
+    I2C1_EV => i2c::EventInterruptHandler<peripherals::I2C1>;
+    I2C1_ER => i2c::ErrorInterruptHandler<peripherals::I2C1>;
+    EXTI13 => exti::InterruptHandler<embassy_stm32::interrupt::typelevel::EXTI13>;
+});
 
 #[embassy_executor::main]
-async fn main(spawner: Spawner) {
-    info!("Embassy Executor Example");
-    let _p = embassy_stm32::init(Default::default());
+async fn main(s: Spawner) {
+    // Initialize HAL
+    let p = embassy_stm32::init(Default::default());
 
-    // Spawn multiple tasks
-    spawner.spawn(blinker()).unwrap();
-    spawner.spawn(sensor_reader()).unwrap();
-    spawner.spawn(logger()).unwrap();
+    // Create an i2c instance
+    let mut config = Config::default();
+    config.timeout = Duration::from_secs(2);
+    let i2c = I2c::new(p.I2C1, p.PB8, p.PB9, Irqs, p.GPDMA1_CH4, p.GPDMA1_CH5, config);
 
-    // Main task can also do work
+    let mut device = Lis3dh::new_i2c_with_config(i2c, SlaveAddr::Default, Configuration::default()).await.unwrap();
+
+    let val = device.read_register(Register::WHOAMI).await.unwrap();
+    defmt::info!("whoami: {}", val);
+
+    let mut button = exti::ExtiInput::new(p.PC13, p.EXTI13, Pull::Down, Irqs);
     loop {
-        info!("[main] Running");
-        Timer::after(Duration::from_secs(5)).await;
-    }
-}
-
-#[embassy_executor::task]
-async fn blinker() {
-    info!("[blinker] Started");
-    loop {
-        info!("[blinker] Tick");
-        Timer::after(Duration::from_millis(500)).await;
-    }
-}
-
-#[embassy_executor::task]
-async fn sensor_reader() {
-    info!("[sensor] Started");
-    loop {
-        // Simulate reading sensor
-        info!("[sensor] Reading...");
-        Timer::after(Duration::from_secs(1)).await;
-    }
-}
-
-#[embassy_executor::task]
-async fn logger() {
-    let mut count = 0;
-    loop {
-        info!("[logger] Count: {}", count);
-        count += 1;
-        Timer::after(Duration::from_secs(2)).await;
+        button.wait_for_rising_edge().await;
+        defmt::info!("Hello!");
     }
 }

@@ -8,6 +8,8 @@ color: #333
 
 # Session 9: Sharing state
 
+**Goal:** Introducing different ways to communicate between tasks
+
 ---
 
 # Data types
@@ -102,35 +104,53 @@ let receiver: DynamicReceiver<'_, u32> = CHANNEL.sender().into();
 ```
 
 ---
-
 # Signal
 
 * Need a container of some data to share from an interrupt
-* Less internal bookkeeping than channel
-* 
+* Less internal bookkeeping than Channel
 
 ---
+<style scoped>
+  section {
+    font-size: 20px; /* Adjusts the base font size for this slide */
+  }
+  </style>
+# Others
 
+* Channel - A Multiple Producer Multiple Consumer (MPMC) channel. Each message is only received by a single consumer.
+* PriorityChannel - A Multiple Producer Multiple Consumer (MPMC) channel. Each message is only received by a single consumer. Higher priority items are shifted to the front of the channel.
+* PubSubChannel - A broadcast channel (publish-subscribe) channel. Each message is received by all consumers.
+* Signal - Signalling latest value to a single consumer.
+* Watch - Signalling latest value to multiple consumers.
+* Mutex - Mutex for synchronizing state between asynchronous tasks.
+* Pipe - Byte stream implementing embedded_io traits.
+* WakerRegistration - Utility to register and wake a Waker.
+* AtomicWaker - Utility to register and wake a Waker from interrupt context.
+* MultiWakerRegistration - Utility registering and waking multiple Waker’s.
+* LazyLock - A value which is initialized on the first access
+
+---
 # Sharing state within executor
 
 * NoopRawMutex - pass lock to different tasks
 * ThreadModeRawMutex - can store in global but only pass to tasks on same executor
 
 ---
-
 # Sharing state with interrupts
 
 * CriticalSectionRawMutex
-* 
-
----
-# Sharing global state
+* core::sync::atomic::
 
 ---
 # Beware
 
+* CriticalSectionRawMutex - disables interrupts!
+* If you need to: custom critical-section implementation!
+
+
 ---
 # Exercise
 
-* Refactor code that polls for accelerometer data and share it via a channel
-* Create another task that consumes data and logs it
+* Remove button logic
+* Create 1 task for reading the accelerometer data periodically (use system timer!) and publish to a channel
+* Create 1 task for consuming from a channel and log the data

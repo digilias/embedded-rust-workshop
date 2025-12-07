@@ -86,3 +86,9 @@ EXECUTOR_LOW.start(interrupt::EGU1_SWI1).spawn(low_prio().unwrap());
 
 * Tasks in different executors has to use `CriticalSectionRawMutex`.
 * Enforced by compiler :tada:
+
+---
+# Exercises
+
+* Setup the lis3dh accelerometer to use IRQ pin
+* Instead of sampling periodically - use IRQ pin
