@@ -48,16 +48,7 @@ fn dummy_raw_waker() -> RawWaker {
         dummy_raw_waker()
     }
 
-    static VTABLE: RawWakerVTable =
-        RawWakerVTable::new(clone, no_op, no_op, no_op);
+    static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, no_op, no_op, no_op);
 
     RawWaker::new(core::ptr::null(), &VTABLE)
 }
-
-// Example usage:
-//
-// let mut executor = SimpleExecutor::new();
-// let result = executor.block_on(async {
-//     // Your async code here
-//     42
-// });

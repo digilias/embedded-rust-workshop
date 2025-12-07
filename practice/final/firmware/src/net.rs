@@ -56,7 +56,7 @@ pub async fn init(p: NetResources, spawner: &Spawner) -> Net {
         p.pg13,
         p.pb15,
         p.pg11,
-        mac_addr,
+       mac_addr,
         p.eth_sma,
         p.pa2,
         p.pc1,

@@ -53,11 +53,13 @@ pub struct ShapeInstance {
     pub shape: Shape,
     pub position: Vector3<f32>,
     pub rotation: Vector3<f32>,
+    pub scale: f32,
 }
 
 struct ShapeGeometry {
     vertices: Vec<Vertex>,
     indices: Vec<u16>,
+    edge_indices: Vec<u16>,
 }
 
 pub struct Renderer {
@@ -67,7 +69,8 @@ pub struct Renderer {
     config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
-    shape_buffers: HashMap<Shape, (wgpu::Buffer, wgpu::Buffer, u32)>,
+    wireframe_pipeline: wgpu::RenderPipeline,
+    shape_buffers: HashMap<Shape, (wgpu::Buffer, wgpu::Buffer, u32, wgpu::Buffer, u32)>,
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
     depth_texture: wgpu::TextureView,
@@ -183,7 +186,7 @@ impl Renderer {
                 entry_point: "fs_main",
                 targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
-                    blend: Some(wgpu::BlendState::REPLACE),
+                    blend: None, // No blending - fully opaque
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
                 compilation_options: Default::default(),
@@ -192,7 +195,51 @@ impl Renderer {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+        });
+
+        // Create wireframe pipeline for outlines
+        let wireframe_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Wireframe Pipeline"),
+            layout: Some(&render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: "vs_main",
+                buffers: &[Vertex::desc()],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: "fs_wireframe",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: None, // No blending - fully opaque wireframe
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::LineList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 unclipped_depth: false,
                 conservative: false,
@@ -216,11 +263,11 @@ impl Renderer {
 
         // Create shape geometries
         let mut shape_buffers = HashMap::new();
-        
+
         // Add all shapes
         for shape_type in &[Shape::Cube, Shape::Pyramid, Shape::Torus, Shape::Cylinder] {
             let geometry = Self::create_shape_geometry(shape_type);
-            
+
             let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(&format!("{:?} Vertex Buffer", shape_type)),
                 contents: bytemuck::cast_slice(&geometry.vertices),
@@ -233,9 +280,15 @@ impl Renderer {
                 usage: wgpu::BufferUsages::INDEX,
             });
 
+            let edge_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some(&format!("{:?} Edge Buffer", shape_type)),
+                contents: bytemuck::cast_slice(&geometry.edge_indices),
+                usage: wgpu::BufferUsages::INDEX,
+            });
+
             shape_buffers.insert(
                 shape_type.clone(),
-                (vertex_buffer, index_buffer, geometry.indices.len() as u32),
+                (vertex_buffer, index_buffer, geometry.indices.len() as u32, edge_buffer, geometry.edge_indices.len() as u32),
             );
         }
 
@@ -246,6 +299,7 @@ impl Renderer {
             config,
             size,
             render_pipeline,
+            wireframe_pipeline,
             shape_buffers,
             uniform_buffer,
             uniform_bind_group,
@@ -328,7 +382,17 @@ impl Renderer {
             20, 22, 21, 22, 20, 23, // left
         ];
 
-        ShapeGeometry { vertices, indices }
+        // Define edges of the cube (12 edges total)
+        let edge_indices = vec![
+            // Front face edges
+            0, 1,  1, 2,  2, 3,  3, 0,
+            // Back face edges
+            4, 5,  5, 6,  6, 7,  7, 4,
+            // Connecting edges from front to back
+            0, 4,  1, 5,  2, 6,  3, 7,
+        ];
+
+        ShapeGeometry { vertices, indices, edge_indices }
     }
 
     fn create_sphere(segments: u32, rings: u32) -> ShapeGeometry {
@@ -372,7 +436,25 @@ impl Renderer {
             }
         }
 
-        ShapeGeometry { vertices, indices }
+        // Create edge indices for sphere wireframe
+        let mut edge_indices = Vec::new();
+        for ring in 0..rings {
+            for segment in 0..segments {
+                let current = ring * (segments + 1) + segment;
+                let next_ring = current + segments + 1;
+                let next_segment = current + 1;
+
+                // Vertical edge
+                edge_indices.push(current as u16);
+                edge_indices.push(next_ring as u16);
+
+                // Horizontal edge
+                edge_indices.push(current as u16);
+                edge_indices.push(next_segment as u16);
+            }
+        }
+
+        ShapeGeometry { vertices, indices, edge_indices }
     }
 
     fn create_pyramid() -> ShapeGeometry {
@@ -402,7 +484,15 @@ impl Renderer {
             8, 5, 4,  // left
         ];
 
-        ShapeGeometry { vertices, indices }
+        // Define edges of the pyramid (8 edges total)
+        let edge_indices = vec![
+            // Base edges
+            0, 1,  1, 2,  2, 3,  3, 0,
+            // Edges from base to apex
+            0, 4,  1, 4,  2, 4,  3, 4,
+        ];
+
+        ShapeGeometry { vertices, indices, edge_indices }
     }
 
     fn create_torus(major_segments: u32, minor_segments: u32, major_radius: f32, minor_radius: f32) -> ShapeGeometry {
@@ -445,7 +535,25 @@ impl Renderer {
             }
         }
 
-        ShapeGeometry { vertices, indices }
+        // Create edge indices for the torus wireframe
+        let mut edge_indices = Vec::new();
+        for i in 0..major_segments {
+            for j in 0..minor_segments {
+                let current = i * (minor_segments + 1) + j;
+                let next_major = ((i + 1) % major_segments) * (minor_segments + 1) + j;
+                let next_minor = current + 1;
+
+                // Edge along major circle
+                edge_indices.push(current as u16);
+                edge_indices.push(next_major as u16);
+
+                // Edge along minor circle
+                edge_indices.push(current as u16);
+                edge_indices.push(next_minor as u16);
+            }
+        }
+
+        ShapeGeometry { vertices, indices, edge_indices }
     }
 
     fn create_cylinder(segments: u32) -> ShapeGeometry {
@@ -508,7 +616,35 @@ impl Renderer {
             indices.push((i * 2 + 1) as u16);
         }
 
-        ShapeGeometry { vertices, indices }
+        // Create edge indices for the cylinder wireframe
+        let mut edge_indices = Vec::new();
+        for i in 0..segments {
+            let top = (i * 2) as u16;
+            let bottom = (i * 2 + 1) as u16;
+            let next_top = (((i + 1) % segments) * 2) as u16;
+            let next_bottom = (((i + 1) % segments) * 2 + 1) as u16;
+
+            // Top rim circle
+            edge_indices.push(top);
+            edge_indices.push(next_top);
+
+            // Bottom rim circle
+            edge_indices.push(bottom);
+            edge_indices.push(next_bottom);
+
+            // Vertical edge
+            edge_indices.push(top);
+            edge_indices.push(bottom);
+
+            // Spokes from center to rim
+            edge_indices.push(top_center);
+            edge_indices.push(top);
+
+            edge_indices.push(bottom_center);
+            edge_indices.push(bottom);
+        }
+
+        ShapeGeometry { vertices, indices, edge_indices }
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -566,9 +702,6 @@ impl Renderer {
                 timestamp_writes: None,
             });
 
-            render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-
             // Set up view projection matrix
             let aspect = self.config.width as f32 / self.config.height as f32;
             let view = Matrix4::look_at_rh(
@@ -579,15 +712,19 @@ impl Renderer {
             let proj = cgmath::perspective(Deg(45.0), aspect, 0.1, 100.0);
             let view_proj = proj * view;
 
-            // Render each instance
+            // First pass: render filled shapes
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+
             for instance in &self.instances {
                 // Create transformation matrix for this instance
                 let translation = Matrix4::from_translation(instance.position);
                 let rotation = Matrix4::from_angle_x(Rad(instance.rotation.x))
                     * Matrix4::from_angle_y(Rad(instance.rotation.y))
                     * Matrix4::from_angle_z(Rad(instance.rotation.z));
-                let model = translation * rotation;
-                
+                let scale = Matrix4::from_scale(instance.scale);
+                let model = translation * rotation * scale;
+
                 let uniform_data = UniformData {
                     view_proj: view_proj.into(),
                     model: model.into(),
@@ -600,11 +737,44 @@ impl Renderer {
                 );
 
                 // Draw the appropriate shape
-                if let Some((vertex_buffer, index_buffer, index_count)) = 
+                if let Some((vertex_buffer, index_buffer, index_count, _, _)) =
                     self.shape_buffers.get(&instance.shape) {
                     render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
                     render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
                     render_pass.draw_indexed(0..*index_count, 0, 0..1);
+                }
+            }
+
+            // Second pass: render wireframe outlines
+            render_pass.set_pipeline(&self.wireframe_pipeline);
+            render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+
+            for instance in &self.instances {
+                // Create transformation matrix for this instance
+                let translation = Matrix4::from_translation(instance.position);
+                let rotation = Matrix4::from_angle_x(Rad(instance.rotation.x))
+                    * Matrix4::from_angle_y(Rad(instance.rotation.y))
+                    * Matrix4::from_angle_z(Rad(instance.rotation.z));
+                let scale = Matrix4::from_scale(instance.scale);
+                let model = translation * rotation * scale;
+
+                let uniform_data = UniformData {
+                    view_proj: view_proj.into(),
+                    model: model.into(),
+                };
+
+                self.queue.write_buffer(
+                    &self.uniform_buffer,
+                    0,
+                    bytemuck::cast_slice(&[uniform_data]),
+                );
+
+                // Draw wireframe using edge indices
+                if let Some((vertex_buffer, _, _, edge_buffer, edge_count)) =
+                    self.shape_buffers.get(&instance.shape) {
+                    render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                    render_pass.set_index_buffer(edge_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                    render_pass.draw_indexed(0..*edge_count, 0, 0..1);
                 }
             }
         }

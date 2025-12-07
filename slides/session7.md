@@ -6,106 +6,123 @@ backgroundColor: #fff
 color: #333
 ---
 
-# Session 7: Embassy executor
+# Session 7: Async <3 Interrupts
 
-* **Goal:** Understanding the embassy executor
+* **Goal:** Understand how to combine async with interrupts
 
---- 
-# Embassy
+---
+# Control flow
 
-* **Collection of libraries**
-  - Use what you want
-  - Even works without async
-* **Executor:** "Runtime" for async tasks
-* **HAL:** For nRF, STM32, RP, ESP32, NXP, MSPM, IMXRT
-* **Utilities:** async channels, mutex, time keeping
-* **Networking:** drivers integrated with smoltcp (Rust TCP/IP stack)
-* **Bluetooth LE:** HCI host implementation
-* **Bootloader**
-* **USB**
+* Task: triggers hardware
+* Interrupt: notifies on completion
 
---- 
-<style scoped>
-  section {
-    font-size: 24px; /* Adjusts the base font size for this slide */
-  }
-  </style>
-<!-- _class: green-accent -->
-# Embassy's executor
+---
+# Interrupts
+
+* Point of view: a separate thread
+* State shared between interrupt and app must be `Sync`
+
+---
+# Building blocks
+
+* `Waker` - reference to a task
+* `Context` - reference to _this_ task
+
+---
+# Task steps
+
+1. Ensure that something triggers an interrupt
+2. If something has happened - finished!
+3. If something did not happen - make sure we get notified!
 
 ```rust
-#[embassy_executor::main]
-async fn main(spawner: Spawner) {
-    let p = embassy_stm32::init(Default::default());
-    let mut led = Output::new(p.PB14, Level::Low, Speed::VeryHigh);
-    let mut button = ExtiInput::new(p.PC13, p.EXTI13, Pull::Up);
-    loop {
-        button.wait_for_any_edge().await;
-        if button.is_low() {
-            led.set_high();
-        } else {
-            led.set_low();
-        }
+impl ButtonFuture {
+    fn new() -> Self {
+        // 1. Setup so that interrupt fires (once)
+    }
+}
+impl Future for ButtonFuture {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        // 2. Check if something has happened - on every poll
+        // 3. If something happened - ready!
+        // 4. If something did not happen - pending!
+        // 5. 🤔 How to get notified?
     }
 }
 ```
 
 ---
-<style scoped>
-  section {
-    font-size: 24px; /* Adjusts the base font size for this slide */
-  }
-  </style>
-<!-- _class: green-accent -->
-# Executor and tasks
+# Wait queues
+
+- `WakerRegistration` - Aka. SingleEntryWaitQueue
 
 ```rust
-#[embassy_executor::main]
-async fn main(spawner: Spawner) {
-    let p = embassy_stm32::init(Default::default());
-    let led = Output::new(p.PB14, Level::Low, Speed::VeryHigh);
-    let button = ExtiInput::new(p.PC13, p.EXTI13, Pull::Up);
-    spawner.spawn(my_task(button, led).unwrap());
+/// Utility struct to register and wake a waker.
+pub struct WakerRegistration {
+    waker: Option<Waker>,
 }
 
-#[embassy_executor::task]
-async fn my_task(mut button: ExtiInput, mut led: Output) {
-    loop {
-        button.wait_for_any_edge().await;
-        if button.is_low() {
-            led.set_high();
-        } else {
-            led.set_low();
-        }
+impl WakerRegistration {
+    pub fn register(&mut self, w: &Waker) {
+        ...
+    }
+
+    pub fn wake(&mut self) {
+        ...
     }
 }
 ```
 
+* 🤔
+
 ---
-  
-# Expanded task macro
+# Other wait queues
+
+- `AtomicWaker` - AKA. SingleEntryAtomicWaitQueue
 
 ```rust
-static MY_TASK: Task<F> = Task::new();
-fn my_task(mut button: ExtiInput, mut led: Output) -> SpawnToken {
-    MY_TASK.init(my_task_inner())
+/// Utility struct to register and wake a waker.
+pub struct AtomicWaker {
+    ...
 }
-
-async fn my_task_inner(mut button: ExtiInput, mut led: Output) {
-    loop {
-        // ...
+impl AtomicWaker {
+    pub fn register(&self, w: &Waker) {
+        ...
+    }
+    
+    pub fn wake(&self) {
+        ...
     }
 }
 ```
 
-* Problem: using generics in statics
-* Solution: clever use of const and macros to figure out the type
+* 😎
 
 ---
-# What alternatives are there?
+# Tying it together
 
-* RTIC
-* smol
-* ... your own?
+```rust
+async fn dostuff() {
+    loop {
+        let mut f = ButtonFuture::new();
+        f.await;
+        info!("Interrupt fired!");
+    }
+}
+
+static WAKER: AtomicWaker = AtomicWaker::new();
+
+#[interrupt]
+fn my_irq_handler() {
+    WAKER.wake();
+}
+```
 
 ---
+# Exercise
+
+* Create a `ButtonFuture` that sets up IRQ and does polling
+* Use `AtomicWaker` to store the waker
+* Modify irq handler to use waker
+* Modify main to create an instance of the future and await it

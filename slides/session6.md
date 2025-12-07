@@ -138,3 +138,4 @@ pub enum Poll<T> {
 # Exercise
 
 * Create a simple busy-loop executor
+* Wrap the application main in an async task

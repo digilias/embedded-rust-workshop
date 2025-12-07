@@ -38,3 +38,13 @@ device_driver::create_device!(
 * https://docs.embassy.dev/embassy-stm32/git/stm32h563zi/gpio/index.html
 * PIN: 13
 * PORT: 2
+
+## Session 6
+
+* https://doc.rust-lang.org/core/future/trait.Future.html
+* https://doc.rust-lang.org/core/task/index.html
+
+## Session 7
+
+* https://doc.rust-lang.org/core/future/trait.Future.html#tymethod.poll
+* https://docs.embassy.dev/embassy-sync/git/default/waitqueue/struct.AtomicWaker.html

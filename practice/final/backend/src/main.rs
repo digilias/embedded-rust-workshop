@@ -20,7 +20,7 @@ struct ClientRotation {
     z: f32,
 }
 
-type ClientData = Arc<RwLock<HashMap<SocketAddr, (Shape, ClientRotation)>>>;
+type ClientData = Arc<RwLock<HashMap<std::net::IpAddr, (Shape, ClientRotation)>>>;
 
 #[tokio::main]
 async fn main() {
@@ -64,33 +64,19 @@ async fn tcp_server(clients: ClientData) {
 async fn handle_client(mut stream: TcpStream, addr: SocketAddr, clients: ClientData) {
     log::info!("New connection from: {}", addr);
 
-    // Get IP address without port for consistent client identification
+    // Use IP address for consistent client identification across reconnections
     let client_ip = addr.ip();
 
-    // Check if this IP already has a shape, or create a new one
+    // Get or create shape for this IP
     let shape = {
         let mut clients_guard = clients.write().await;
-        
-        // Find existing entry by IP
-        let existing = clients_guard
-            .iter()
-            .find(|(k, _)| k.ip() == client_ip)
-            .map(|(_, v)| v.0.clone());
 
-        if let Some(shape) = existing {
-            // Update the address with new port but keep the shape
-            let rotation = clients_guard
-                .iter()
-                .find(|(k, _)| k.ip() == client_ip)
-                .map(|(_, v)| v.1.clone())
-                .unwrap_or(ClientRotation { x: 0.0, y: 0.0, z: 0.0 });
-            
-            // Remove old entry if port changed
-            clients_guard.retain(|k, _| k.ip() != client_ip);
-            clients_guard.insert(addr, (shape.clone(), rotation));
-            shape
+        if let Some((shape, _)) = clients_guard.get(&client_ip) {
+            // Reuse existing shape for this IP
+            log::info!("Client {} reconnected, reusing existing shape: {:?}", addr, shape);
+            shape.clone()
         } else {
-            // Create new random shape
+            // Create new random shape for new IP
             use rand::Rng;
             let mut rng = rand::thread_rng();
             let shape = match rng.gen_range(0..4) {
@@ -99,16 +85,15 @@ async fn handle_client(mut stream: TcpStream, addr: SocketAddr, clients: ClientD
                 2 => Shape::Torus,
                 _ => Shape::Cylinder,
             };
-            
+
             clients_guard.insert(
-                addr,
+                client_ip,
                 (shape.clone(), ClientRotation { x: 0.0, y: 0.0, z: 0.0 })
             );
+            log::info!("Client {} assigned new shape: {:?}", addr, shape);
             shape
         }
     };
-
-    log::info!("Client {} assigned shape: {:?}", addr, shape);
 
     // Buffer for reading 3 f32 values (12 bytes total)
     let mut buffer = [0u8; 12];
@@ -123,7 +108,7 @@ async fn handle_client(mut stream: TcpStream, addr: SocketAddr, clients: ClientD
 
                 // Update rotation
                 let mut clients_guard = clients.write().await;
-                if let Some(client) = clients_guard.get_mut(&addr) {
+                if let Some(client) = clients_guard.get_mut(&client_ip) {
                     client.1 = ClientRotation { x, y, z };
                 }
 
@@ -168,10 +153,19 @@ async fn run_renderer(clients: ClientData) {
                             if let Ok(clients_guard) = clients.try_read() {
                                 let num_clients = clients_guard.len();
 
+                                // Calculate scale based on number of sensors
+                                // More sensors = smaller objects to fit in view
+                                let base_scale = 5.0; // Larger base scale to fill viewport better
+                                let scale = if num_clients == 0 {
+                                    base_scale
+                                } else {
+                                    (base_scale / (num_clients as f32).sqrt()).max(0.5).min(base_scale)
+                                };
+
                                 clients_guard
                                     .iter()
                                     .enumerate()
-                                    .map(|(index, (_addr, (shape, rotation)))| {
+                                    .map(|(index, (_ip, (shape, rotation)))| {
                                         // Calculate position in a grid
                                         let cols = (num_clients as f32).sqrt().ceil() as i32;
                                         let row = (index as i32) / cols;
@@ -185,6 +179,7 @@ async fn run_renderer(clients: ClientData) {
                                             shape: shape.clone(),
                                             position: Vector3::new(x, 0.0, z),
                                             rotation: Vector3::new(rotation.x, rotation.y, rotation.z),
+                                            scale,
                                         }
                                     })
                                     .collect()

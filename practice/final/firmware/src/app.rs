@@ -3,6 +3,7 @@ use static_cell::StaticCell;
 use embedded_io_async::Write;
 use core::net::{SocketAddr, Ipv4Addr, IpAddr};
 use embedded_nal_async::TcpConnect as _;
+use embassy_time::Timer;
 use defmt::*;
 
 pub struct App {
@@ -40,6 +41,7 @@ pub async fn run(app: App) {
             }
             Err(e) => {
                 warn!("Failed connecting to {:?}: {:?}", remote, e);
+                Timer::after_secs(1).await;
             }
         }
     }

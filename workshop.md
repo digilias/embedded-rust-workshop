@@ -154,7 +154,15 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 * Write basic executor from scratch
 * Understand waker mechanics
 
-## Session 7: Embassy executor
+## Session 7: Handling interrupts with async
+
+**Goal:** Understand how to combine async with interrupts
+
+**Theory:** Creating wakers and manual future implementations
+
+**Practice:** Modifying application to use async API for sensor
+
+## Session 8: Embassy executor
 
 **Goal:*** Understanding the embassy executor
 
@@ -169,13 +177,6 @@ Covering all of the topics might be too ambitious, but we can speed up or skip s
 * Implement async sensor polling task
 * Add async delays and timeouts
 
-## Session 8: Handling interrupts with async
-
-**Goal:** Understand how to combine async with interrupts
-
-**Theory:** Creating wakers and manual future implementations
-
-**Practice:** Modifying application to use async API for sensor
 
 ## Session 9: Synchronization patterns
 

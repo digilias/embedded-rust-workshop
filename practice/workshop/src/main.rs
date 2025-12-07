@@ -10,43 +10,79 @@ use embassy_stm32::{
 };
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
+use core::task::RawWakerVTable;
+use core::task::RawWaker;
+use core::task::Waker;
+use core::task::Poll;
+use core::task::Context;
+use core::pin::Pin;
+use core::sync::atomic::{AtomicBool, Ordering};
+use embassy_sync::waitqueue::AtomicWaker;
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    //#[embassy_executor::main]
-    //async fn main(spawner: embassy_executor::Spawner) {
+    let mut executor = SimpleExecutor::new();
+    executor.block_on(async {
+        // Initialize HAL
+        let p = embassy_stm32::init(Default::default());
 
-    // Initialize HAL
-    let p = embassy_stm32::init(Default::default());
+        // Create an i2c instance
+        let mut config = Config::default();
+        config.timeout = Duration::from_secs(2);
+        let i2c = I2cstm::new_blocking(p.I2C1, p.PB8, p.PB9, config);
 
-    // Create an i2c instance
-    let mut config = Config::default();
-    config.timeout = Duration::from_secs(2);
-    let i2c = I2cstm::new_blocking(p.I2C1, p.PB8, p.PB9, config);
+        let mut device = Lis3dh::new(I2cInterface::new(i2c));
 
-    let mut device = Lis3dh::new(I2cInterface::new(i2c));
+        let val = device.who_am_i().read().unwrap().value();
+        defmt::info!("whoami: {}", val);
 
-    let val = device.who_am_i().read().unwrap().value();
-    defmt::info!("whoami: {}", val);
+        let _button = Input::new(p.PC13, Pull::Down);
+        loop {
+            let mut fut = ButtonFuture::new();
+            fut.await;
+            defmt::info!("Hello!");
+        }
 
-    let mut button = Input::new(p.PC13, Pull::Down);
-    // Pin: 13 port 2 rising false falling true drop true
-    let pin = 13;
-    let port = 2;
-    let rising = true;
-    let falling = false;
-
-    use pac::EXTI;
-    EXTI.exticr(pin / 4).modify(|w| w.set_exti(pin % 4, port));
-    EXTI.rtsr(0).modify(|w| w.set_line(pin, rising));
-    EXTI.ftsr(0).modify(|w| w.set_line(pin, falling));
-    EXTI.rpr(0).write(|w| w.set_line(pin, true));
-    EXTI.fpr(0).write(|w| w.set_line(pin, true));
-    EXTI.imr(0).modify(|w| w.set_line(pin, true));
-
-    let executor = SimpleExecutor::new();
-    loop {}
+    })
 }
+
+struct ButtonFuture;
+impl ButtonFuture {
+    pub fn new() -> Self {
+        // Pin: 13 port 2 rising false falling true drop true
+        let pin = 13;
+        let port = 2;
+        let rising = true;
+        let falling = false;
+
+        use pac::EXTI;
+        EXTI.exticr(pin / 4).modify(|w| w.set_exti(pin % 4, port));
+        EXTI.rtsr(0).modify(|w| w.set_line(pin, rising));
+        EXTI.ftsr(0).modify(|w| w.set_line(pin, falling));
+        EXTI.rpr(0).write(|w| w.set_line(pin, true));
+        EXTI.fpr(0).write(|w| w.set_line(pin, true));
+        EXTI.imr(0).modify(|w| w.set_line(pin, true));
+        Self
+    }
+}
+impl Future for ButtonFuture {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        use pac::EXTI;
+        WAKER.register(cx.waker());
+
+        let pin = 13;
+        let imr = EXTI.imr(0).read();
+        if !imr.line(pin) {
+            EXTI.imr(0).modify(|w| w.set_line(pin, true));
+            Poll::Ready(())
+        } else {
+            Poll::Pending
+        }
+    }
+}
+
+static WAKER: AtomicWaker = AtomicWaker::new();
 
 #[interrupt]
 unsafe fn EXTI13() {
@@ -63,9 +99,8 @@ unsafe fn EXTI13() {
     let pin = 13;
     let imr = EXTI.imr(0).read();
     if !imr.line(pin) {
-        defmt::info!("Hello!");
+        WAKER.wake();
     }
-    EXTI.imr(0).modify(|w| w.set_line(pin, true));
 }
 
 use embedded_hal::i2c::I2c;
