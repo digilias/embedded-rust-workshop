@@ -162,7 +162,11 @@ async fn run_renderer(clients: ClientData) {
                                     (base_scale / (num_clients as f32).sqrt()).max(0.5).min(base_scale)
                                 };
 
-                                clients_guard
+                                // Sort by IP address to ensure stable iteration order
+                                let mut sorted_clients: Vec<_> = clients_guard.iter().collect();
+                                sorted_clients.sort_by_key(|(ip, _)| *ip);
+
+                                sorted_clients
                                     .iter()
                                     .enumerate()
                                     .map(|(index, (_ip, (shape, rotation)))| {

@@ -89,3 +89,5 @@ embassy-usb = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6
 #embassy-net = {path = "../../../embassy/embassy-net"}
 #embassy-sync = {path = "../../../embassy/embassy-sync"}
 #embassy-usb = {path = "../../../embassy/embassy-usb"}
+
+lis3dh-async = { path = "../../../lis3dh-rs-async" }

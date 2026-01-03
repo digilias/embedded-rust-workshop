@@ -3,12 +3,12 @@
 We'll start from scratch with blinky, then build and improve an embedded application that:
 
 * Reads data from an I2C sensor
-* Logs data and events using RTT/defmt
-* Uses async/await to take advantage of unique Rust features.
-* Demonstrates safe patterns and C interoperability
-* Serves sensor data over TCP/IP using the onboard Ethernet
+* Logging data and events
+* Uses async/await to take advantage of unique Rust features
+* Demonstrates common patterns for composing Rust applications
+* Sharing data over TCP/IP network
 
-The idea is to evolve the application through the sessions, starting with basics and ending up with an async application. By the end of the workshop, participants should be able to: 
+The idea is to evolve the application through the sessions, starting with basics and ending up with an full blown application. By the end of the workshop, participants should be able to: 
 
 1. Set up and configure embedded rust projects for stm32
 2. Understand the differences between the PAC, HAL, and applying the appropriate abstractions.
@@ -18,17 +18,18 @@ The idea is to evolve the application through the sessions, starting with basics
 6. Apply proper logging, error handling, and testing strategies
 7. Writing network code with embassy-net
 
+
 ## Equipment we will use
 
 * stm32h563zi nucleo boards (1 per participant)
 * I2C accelerometer + wires
-* Ethernet cables
-* Network switch
-* Raspberry Pi to represent 'the cloud'.
+* Network switch + cables
+* Laptop to represent a backend
 
 ## Prerequisites
 
 Participants are expected to be familiar with these concepts:
+
 * How to build using the cargo tool
 * The basics of the Cargo.toml manifest
 * Using structs, enums and traits
@@ -44,6 +45,13 @@ Participants are expected to have the following tools installed:
 * rustup - https://rustup.rs/ - it's important to install rust using rustup because we need rustup for additional tools
 * probe-rs https://probe.rs/ - remember to setup the correct permissions as described in https://probe.rs/docs/getting-started/probe-setup/
 * ARM gcc toolchain (for building C library and various tools)
+
+Each session will contain a 5-20 minute theory part, and a practice part where participants will perform some exercises building up the application with assistance.
+
+Participants should run through session 1 on their own to make sure they have everything working with the devkit beforehand:
+
+* Clone the workshop repository: https://github.com/digilias/embedded-rust-workshop
+* Follow the instructions for session 1: https://github.com/digilias/embedded-rust-workshop/blob/main/slides/session1.md
 
 See you on January 29th. If there any questions or special requirements in advance, feel free to reach me at ulf@digili.no
 

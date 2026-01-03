@@ -77,7 +77,7 @@ color: #333
 
 ---
 
-# The meatpack
+# The "meatpack"
 
 * [stm32-metapac](https://crates.io/crates/stm32-metapac)
 * In a nutshell: An advanced Rust build-time dependency (build.rs) that reads JSON and generates Rust code from it.

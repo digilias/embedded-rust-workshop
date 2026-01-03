@@ -952,8 +952,6 @@ checksum = "2874a2af47a2325c2001a6e6fad9b16a53b802102b528163885171cf92b15976"
 [[package]]
 name = "lis3dh-async"
 version = "0.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3964d73d6cdac4d06e733062301986c87b33f35c3b5be03f61f93b25277fa33"
 dependencies = [
  "accelerometer",
  "defmt 0.3.100",

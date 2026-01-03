@@ -1,7 +1,7 @@
 use embedded_hal_async::i2c::I2c;
 use embedded_hal_async::digital::Wait;
 use embedded_hal::digital::InputPin;
-use lis3dh_async::{Lis3dh, Lis3dhI2C, SlaveAddr, Configuration, Range, Interrupt1, InterruptMode, Mode, DataRate, InterruptConfig, IrqPin1Config, Threshold, Duration, Error};
+use lis3dh_async::{Lis3dh, Lis3dhI2C, Lis3dhCore, Register, SlaveAddr, Configuration, Range, Interrupt1, InterruptMode, Mode, DataRate, InterruptConfig, IrqPin1Config, Threshold, Duration, Error};
 use crate::board::{XlResources, Irqs};
 use embassy_stm32::i2c::{I2c as I2cPeripheral, Master};
 use embassy_stm32::mode::Async;
@@ -18,6 +18,8 @@ type IrqType = ExtiInput<'static>;
 pub struct Accel<I: I2c, IRQ: Wait + InputPin> {
     xl: Lis3dh<Lis3dhI2C<I>>,
     irq: IRQ,
+    filter_state: Option<Sample>,
+    alpha: f32,
 }
 
 #[derive(Clone, Copy, defmt::Format)]
@@ -34,22 +36,26 @@ impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
             datarate: DataRate::PowerDown,
             ..Configuration::default()
         };
-        let dr = DataRate::Hz_25;
+        let dr = DataRate::Hz_400;
 
         let mut xl = Lis3dh::new_i2c_with_config(i2c, SlaveAddr::Default, config).await?;
 
+
+        // Ensure high pass filter is enabled
+//         xl.write_register(Register::CTRL2, 0x09).await?;
+
+        xl.set_datarate(dr).await?;
+
         // Configure the threshold value for interrupt 1 to 1.1g
-        let threshold = Threshold::g(Range::default(), 0.1);
+        let threshold = Threshold::g(Range::G2, 2.0);
         xl.configure_irq_threshold(Interrupt1, threshold).await?;
 
-        // The time in 1/ODR an axis value should be above threshold in order for an
-        // interrupt to be raised
-        let duration = Duration::miliseconds(dr, 0.0);
+        let duration = Duration::seconds(dr, 1.0);
         xl.configure_irq_duration(Interrupt1, duration).await?;
 
         xl.configure_irq_src(
             Interrupt1,
-            InterruptMode::Movement,
+            InterruptMode::Position,
             InterruptConfig::high_and_low(),
         ).await?;
 
@@ -60,34 +66,46 @@ impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
             ..IrqPin1Config::default()
         }).await?;
 
-        xl.set_datarate(dr).await?;
 
-        Ok(Self { xl, irq })
+
+        Ok(Self {
+            xl,
+            irq,
+            filter_state: None,
+            alpha: 0.02, // Default alpha value (0.2 = moderate filtering)
+        })
+    }
+
+    fn apply_low_pass_filter(&mut self, raw_sample: Sample) -> Sample {
+        match self.filter_state {
+            None => {
+                // First sample, initialize filter state
+                self.filter_state = Some(raw_sample);
+                raw_sample
+            }
+            Some(prev) => {
+                // Apply exponential moving average: filtered = alpha * new + (1 - alpha) * prev
+                let filtered = Sample {
+                    x: self.alpha * raw_sample.x + (1.0 - self.alpha) * prev.x,
+                    y: self.alpha * raw_sample.y + (1.0 - self.alpha) * prev.y,
+                    z: self.alpha * raw_sample.z + (1.0 - self.alpha) * prev.z,
+                };
+                self.filter_state = Some(filtered);
+                filtered
+            }
+        }
     }
 
     pub async fn sample(&mut self) -> Result<Sample, Error<I::Error>> {
-        let mut previous: Option<Sample> = None;
-        loop {
-            let _ = self.irq.wait_for_high().await;
-            if let Ok(true) = self.xl.is_data_ready().await {
-                let sample = self.xl.accel_norm().await?;
-                let sample = Sample {
-                    x: sample.x,
-                    y: sample.y,
-                    z: sample.z,
-                };
-                if let Some(previous) = previous {
-                    const THRESHOLD: f32 = 0.01;
-                    if (previous.x - sample.x).abs() > THRESHOLD ||
-                        (previous.y - sample.y).abs() > THRESHOLD ||
-                        (previous.z - sample.z).abs() > THRESHOLD {
-                        return Ok(sample)
-                    }
-                }
-                previous.replace(sample);
-            }
-        }
-
+        let _ = self.irq.wait_for_high().await;
+        let raw_sample = self.xl.accel_norm().await?;
+        let raw_sample = Sample {
+            x: raw_sample.x,
+            y: raw_sample.y,
+            z: raw_sample.z,
+        };
+        let filtered_sample = self.apply_low_pass_filter(raw_sample);
+        Ok(filtered_sample)
     }
 }
 

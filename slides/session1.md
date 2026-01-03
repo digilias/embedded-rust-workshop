@@ -39,5 +39,5 @@ color: #333
 # Exercise
 
 * Get all the tools installed
-* Start with the workshop project
-* Run it
+* Start with the workshop project - `cd practice/workshop`
+* Run it - `cargo run --release`
