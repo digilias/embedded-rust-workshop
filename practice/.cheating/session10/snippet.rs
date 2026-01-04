@@ -30,11 +30,7 @@ async fn main(s: Spawner) {
     // Initialize HAL
     let p = embassy_stm32::init(Default::default());
 
-    let mut enable = Output::new(p.PG9, Level::Low, Speed::Low);
     let mut irq = ExtiInput::new(p.PA5, p.EXTI5, Pull::Down, Irqs);
-
-    enable.set_high();
-    Timer::after_secs(1).await;
 
     // Create an i2c instance
     let mut config = Config::default();
