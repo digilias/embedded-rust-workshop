@@ -41,7 +41,6 @@ async fn main(s: Spawner) {
     config.timeout = Duration::from_secs(2);
     let i2c = I2c::new(p.I2C1, p.PB8, p.PB9, Irqs, p.GPDMA1_CH4, p.GPDMA1_CH5, config);
 
-
     let mut device = Lis3dh::new_i2c_with_config(i2c, SlaveAddr::Default, Configuration::default()).await.unwrap();
 
     let val = device.read_register(Register::WHOAMI).await.unwrap();

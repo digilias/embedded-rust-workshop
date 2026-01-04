@@ -90,39 +90,5 @@ EXECUTOR_LOW.start(interrupt::EGU1_SWI1).spawn(low_prio().unwrap());
 ---
 # Exercises
 
-* Setup the lis3dh accelerometer to use IRQ pin
-
-  ```rust
-  // Configure the threshold value for interrupt 1 to 1.1g
-  let threshold = Threshold::g(Range::G2, 1.1);
-  xl.configure_irq_threshold(Interrupt1, threshold).await?;
-
-  let duration = Duration::seconds(dr, 0.025);
-  xl.configure_irq_duration(Interrupt1, duration).await?;
-
-  xl.configure_irq_src(
-      Interrupt1,
-      InterruptMode::Position,
-      InterruptConfig::high_and_low(),
-  ).await?;
-
-  // Raise pin state if interrupt 1 is raised and there is movement
-  xl.configure_interrupt_pin(IrqPin1Config {
-      ia1_en: true,
-      zyxda_en: true,
-      ..IrqPin1Config::default()
-  }).await?;
-  ```
-
-* Instead of sampling periodically - use IRQ pin
-  ```rust
-    let _ = self.irq.wait_for_high().await;
-    let raw_sample = self.xl.accel_norm().await?;
-    let raw_sample = Sample {
-        x: raw_sample.x,
-        y: raw_sample.y,
-        z: raw_sample.z,
-    };
-    let filtered_sample = self.apply_low_pass_filter(raw_sample);
-    Ok(filtered_sample)
-  ```
+* Setup the lis3dh accelerometer to signal reading via IRQ
+* Instead of sampling periodically - await IRQ

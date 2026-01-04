@@ -78,25 +78,56 @@ device_driver::create_device!(
 
 * https://docs.rs/lis3dh-async/latest/lis3dh_async/struct.Lis3dh.html#method.configure_interrupt_pin
 * https://docs.rs/lis3dh-async/latest/lis3dh_async/struct.Lis3dh.html#method.configure_irq_src
+* https://docs.embassy.dev/embassy-stm32/git/stm32h563zi/exti/struct.ExtiInput.html (PA5)
 
   ```rust
-  let duration = Duration::miliseconds(dr, 0.0);
-  xl.configure_irq_duration(Interrupt1, duration).await?;
+    let dr = DataRate::Hz_1;
+    unwrap!(xl.set_datarate(dr).await);
 
-  xl.configure_irq_src(
-      Interrupt1,
-      InterruptMode::Movement,
-      InterruptConfig::high_and_low(),
-  ).await?;
+    unwrap!(xl.configure_irq_src(
+        Interrupt1,
+        InterruptMode::Position,
+        InterruptConfig::high_and_low(),
+    ).await);
 
-  xl.configure_interrupt_pin(IrqPin1Config {
-      ia1_en: true,
-      zyxda_en: true,
-      ..IrqPin1Config::default()
-  }).await?;
+    // Raise pin state if interrupt 1 is raised and there is movement
+    unwrap!(xl.configure_interrupt_pin(IrqPin1Config {
+        zyxda_en: true,
+        ..IrqPin1Config::default()
+    }).await);
   ```
 ## Session 11 
 
+* https://crates.io/crates/panic-persist
+* https://crates.io/crates/panic-halt
+* https://crates.io/crates/panic-reset
+* https://crates.io/crates/panic-probe
+
 ## Session 12
 
+* https://crates.io/crates/bindgen
+* See ../libs/lowpass_filter/include/lowpass_filter.h
+* See ../libs/lowpass_filter/Cargo.toml 
+* See ../libs/lowpass_filter/build.rs
+* See ../libs/lowpass_filter/src/lib.rs
+
 ## Session 13
+
+* https://docs.embassy.dev/embassy-net/git/default/struct.Config.html
+* https://docs.embassy.dev/embassy-net/git/default/struct.Stack.html
+* https://docs.embassy.dev/embassy-net/git/default/tcp/struct.TcpSocket.html
+
+* Client
+  ```rust
+  use embassy_net::tcp::TcpSocket;
+
+  let mut tx_buffer = [0u8; 2048];
+  let mut rx_buffer = [0u8; 2048];
+  let mut socket = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
+
+  // Connect to server
+  socket.connect(remote_endpoint).await?;
+
+  // Write data
+  socket.write_all(b"GET / HTTP/1.0\r\n\r\n").await?;
+  ```
