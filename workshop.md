@@ -48,10 +48,13 @@ Participants are expected to have the following tools installed:
 
 Each session will contain a 5-20 minute theory part, and a practice part where participants will perform some exercises building up the application with assistance.
 
-Participants should run through session 1 on their own to make sure they have everything working with the devkit beforehand:
+Participants should go through these steps up front so we don't have to spend time on tooling:
 
+* Make sure you have the above tools installed
+* Configure your IDE for Rust development (VSCode rust-analyzer plugin, or IntelliJ Rust support)
 * Clone the workshop repository: https://github.com/digilias/embedded-rust-workshop
-* Follow the instructions for session 1: https://github.com/digilias/embedded-rust-workshop/blob/main/slides/session1.md
+* Open the practice/workshop folder in a terminal
+* Run `cargo run --release` to run the blinky application
 
 See you on January 29th. If there any questions or special requirements in advance, feel free to reach me at ulf@digili.no
 

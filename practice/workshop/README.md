@@ -1,5 +1,10 @@
 # workshop
 
+## Board wiring
+
+![wiring 1](img/wiring1.jpg)
+![wiring 2](img/wiring2.jpg)
+
 ## Session 2
 
 * https://docs.embassy.dev/embassy-stm32/git/stm32h563zi/index.html

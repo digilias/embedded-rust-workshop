@@ -21,7 +21,7 @@ color: #333
 --- 
 # General info
 
-* 15 minute introduction to a topic
+* 5-20 minute introduction to a topic
 * 15-45 minute practice
 * 0-15 minute discussion and questions
 
@@ -33,6 +33,16 @@ color: #333
 * Contains necessary deps in `Cargo.toml`
 * Help snippets can be found in `practice/snippets` - please use these if you get stuck
 * `practice/workshop/README.md` contains references to relevant docs for each session
+
+---
+# Devkit wiring
+
+![bg](wiring1.jpg)
+
+---
+# Devkit wiring
+
+![bg](wiring2.jpg)
 
 ---
 
