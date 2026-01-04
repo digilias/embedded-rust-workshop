@@ -26,13 +26,13 @@ cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-sing
 cortex-m-rt = "0.7.0"
 embedded-hal = "1.0"
 embedded-hal-async = { version = "1.0" }
-embedded-io-async = { version = "0.6.1" }
+embedded-io-async = { version = "0.6" }
 embedded-nal-async = "0.8.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 heapless = { version = "0.8", default-features = false }
 critical-section = "1.1"
 micromath = "2.0.0"
-stm32-fmc = "0.3.0"
+#stm32-fmc = "0.3.0"
 embedded-storage = "0.3.1"
 static_cell = "2"
 
@@ -81,3 +81,11 @@ embassy-time = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f
 embassy-net = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6bea6b6e55ba3dfe0f3b86152402e47d3f"}
 embassy-sync = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6bea6b6e55ba3dfe0f3b86152402e47d3f"}
 embassy-usb = {git = "https://github.com/embassy-rs/embassy.git", rev = "a66d9f6bea6b6e55ba3dfe0f3b86152402e47d3f"}
+
+#embassy-executor = {path = "../../../embassy/embassy-executor"}
+#embassy-stm32 = {path = "../../../embassy/embassy-stm32"}
+#embassy-time = {path = "../../../embassy/embassy-time"}
+#embassy-net = {path = "../../../embassy/embassy-net"}
+#embassy-sync = {path = "../../../embassy/embassy-sync"}
+#embassy-usb = {path = "../../../embassy/embassy-usb"}
+#embassy-futures = {path = "../../../embassy/embassy-futures"}

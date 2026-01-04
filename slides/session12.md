@@ -14,10 +14,9 @@ color: #333
 
 # Why integrate with C?
 
-* Existing battle-tested libraries (compression, crypto, DSP)
-* Hardware vendor SDKs and drivers
-* Legacy code you need to reuse
-* Performance-critical code already optimized
+* Very battle tested complex drivers you don't want to rewrite
+* Binary blobs you need to use
+* Personal opinion: If you can rewrite, it's probably better to do that longer term
 
 ---
 
@@ -40,7 +39,27 @@ fn rust_function() {
 
 ---
 
-# bindgen - Automatic binding generation
+# Calling Rust from C
+
+```rust
+
+// As long as they match a C struct, it works
+#[repr(C)] // IMPORTANT
+pub struct Foo {
+    val: u32,
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn add_foo(foo: *const Foo, val: u32) {
+    // Dereference foo and add value
+}
+```
+
+* Still no Rust safety guarantees across FFI boundary
+
+---
+
+# bindgen - binding generation at build time
 
 ```toml
 [build-dependencies]
@@ -83,10 +102,9 @@ cc = "1.0"
 
 ---
 
-# C-style error handling
+# Example: C-style error handling
 
 ```c
-// C code
 int do_operation(int* result) {
     if (error_condition) {
         return -1;  // Error code
@@ -98,7 +116,7 @@ int do_operation(int* result) {
 
 ---
 
-# Wrapping C errors in Rust
+# Example: Wrapping C errors in Rust
 
 ```rust
 fn safe_do_operation() -> Result<i32, CError> {
@@ -111,29 +129,6 @@ fn safe_do_operation() -> Result<i32, CError> {
         Err(CError::from_code(ret))
     } else {
         Ok(result)
-    }
-}
-```
-
----
-
-# Memory management challenges
-
-```c
-// C code - who owns this memory?
-char* get_string(void);
-void free_string(char* str);
-```
-
-```rust
-// Rust wrapper
-fn get_c_string() -> String {
-    unsafe {
-        let ptr = get_string();
-        let c_str = std::ffi::CStr::from_ptr(ptr);
-        let rust_string = c_str.to_string_lossy().into_owned();
-        free_string(ptr);  // Must remember to free!
-        rust_string
     }
 }
 ```
@@ -171,7 +166,7 @@ impl Drop for MathLib {
 
 # Exercise
 
-* Wrap a simple C math library
+* Wrap a simple C math library (in snippets)
 * Use `cc` crate to build C code
 * Create safe Rust API around unsafe C functions
 * Handle C error codes properly

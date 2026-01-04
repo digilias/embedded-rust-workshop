@@ -36,22 +36,11 @@ impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
             datarate: DataRate::PowerDown,
             ..Configuration::default()
         };
-        let dr = DataRate::Hz_400;
 
         let mut xl = Lis3dh::new_i2c_with_config(i2c, SlaveAddr::Default, config).await?;
 
-
-        // Ensure high pass filter is enabled
-//         xl.write_register(Register::CTRL2, 0x09).await?;
-
+        let dr = DataRate::Hz_100;
         xl.set_datarate(dr).await?;
-
-        // Configure the threshold value for interrupt 1 to 1.1g
-        let threshold = Threshold::g(Range::G2, 2.0);
-        xl.configure_irq_threshold(Interrupt1, threshold).await?;
-
-        let duration = Duration::seconds(dr, 1.0);
-        xl.configure_irq_duration(Interrupt1, duration).await?;
 
         xl.configure_irq_src(
             Interrupt1,
@@ -61,18 +50,16 @@ impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
 
         // Raise pin state if interrupt 1 is raised and there is movement
         xl.configure_interrupt_pin(IrqPin1Config {
-            ia1_en: true,
             zyxda_en: true,
             ..IrqPin1Config::default()
         }).await?;
-
 
 
         Ok(Self {
             xl,
             irq,
             filter_state: None,
-            alpha: 0.02, // Default alpha value (0.2 = moderate filtering)
+            alpha: 0.1, // Lower value -> smoother but more delay
         })
     }
 

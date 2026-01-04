@@ -44,7 +44,7 @@ Participants are expected to have the following tools installed:
 
 * rustup - https://rustup.rs/ - it's important to install rust using rustup because we need rustup for additional tools
 * probe-rs https://probe.rs/ - remember to setup the correct permissions as described in https://probe.rs/docs/getting-started/probe-setup/
-* ARM gcc toolchain (for building C library and various tools)
+* ARM gcc toolchain (for building C library and various tools) for bare metal - https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads
 
 Each session will contain a 5-20 minute theory part, and a practice part where participants will perform some exercises building up the application with assistance.
 

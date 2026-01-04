@@ -39,86 +39,62 @@ color: #333
 
 ---
 
-# `embassy-net` overview
+# `embassy-net`
 
 * Async TCP/IP network stack for embedded systems
 * Built on top of `smoltcp`
-* Designed for resource-constrained devices
-* Integrates seamlessly with async rust
+
+---
+
+# `embassy-net-driver` 
+
+* Driver traits for implementing drivers that work with `embassy-net`
+* Examples
+  * `embassy-net-ppp`
+  * `embassy-net-nrf91`
+  * `embassy-net-wiznet`
+  * `embassy-net-esp-hosted`
+  * `embassy-net-en28j60`
+  * `embassy-net-adin1110`
+  * `embassy-net-tuntap`
+
+--- 
+
+# `embassy-net-driver-channel` 
+
+* Helper crate for implementing drivers
 
 ---
 
 # Control + Runner pattern
 
-* **Runner task**: Processes network stack events
+* **Runner task**: Drives the TCP/IP stack with the driver
 * **Control handle**: Application interface to the stack
 
 ```rust
 #[embassy_executor::task]
-async fn net_task(stack: &'static Stack<Device>) -> ! {
-    stack.run().await  // Never returns
+async fn net_task(runner: embassy_net::Runner<'static, Device>) -> ! {
+    runner.run().await  // Never returns
 }
 
 async fn main(spawner: Spawner) {
-    let stack = Stack::new(/* ... */);
-    spawner.spawn(net_task(stack)).unwrap();
-    // Use stack via control handle
+    static RESOURCES: StaticCell<StackResources<3>> = StaticCell::new();
+    
+    let seed: [u8; 8] = [0; 8]; // chosen by fair dice roll. guaranteed to be random
+
+    let (stack, runner) = embassy_net::new(device, config, RESOURCES.init(StackResources::new()), seed);
+    spawner.spawn(net_task(runner).unwrap());
+
+    // Example: ensure DHCP configuration is up before trying connect
+    stack.wait_config_up().await;
+
+    // Now you can create TCP sockets
 }
 ```
 
 ---
 
-# Why this pattern?
-
-* **Separation of concerns**
-  - Runner handles internal state machine
-  - Application uses clean async API
-* **Efficiency**
-  - Single task processes all network events
-  - No polling overhead
-* **Safety**
-  - Stack internals are private
-  - Only safe operations exposed
-
----
-
-# Setting up embassy-net
-
-```rust
-use embassy_net::{Stack, StackResources, Config};
-
-// Statically allocated resources
-static RESOURCES: StaticCell<StackResources<3>> = StaticCell::new();
-
-let config = Config::dhcpv4(Default::default());
-
-let stack = Stack::new(
-    device,
-    config,
-    RESOURCES.init(StackResources::new()),
-    seed,  // Random seed for stack
-);
-```
-
----
-
-# Network configuration options
-
-```rust
-// DHCP (automatic)
-let config = Config::dhcpv4(Default::default());
-
-// Static IP
-let config = Config::ipv4_static(StaticConfigV4 {
-    address: Ipv4Cidr::new(Ipv4Address::new(192, 168, 1, 100), 24),
-    gateway: Some(Ipv4Address::new(192, 168, 1, 1)),
-    dns_servers: Vec::new(),
-});
-```
-
----
-
-# TCP client example
+# TCP socket - client
 
 ```rust
 use embassy_net::tcp::TcpSocket;
@@ -140,7 +116,7 @@ let n = socket.read(&mut buffer).await?;
 
 ---
 
-# TCP server example
+# TCP socket - server
 
 ```rust
 use embassy_net::tcp::TcpSocket;
@@ -177,21 +153,40 @@ info!("Resolved to: {:?}", address);
 
 ---
 
+# Higher level protocols
+
+* `embedded-nal-async` - implemented by embassy_net::tcp::client
+* `reqwless` - http client
+* `rust_mqtt` - mqtt client
+* `embedded-tls` - rust TLS stack
+
+---
+
 # Resource considerations
 
 * **Buffer sizing**
-  - TX/RX buffers per socket
-  - Trade-off: memory vs throughput
+  - TX/RX buffer sizes
 * **Socket limits**
   - Defined in `StackResources<N>`
-  - Each socket costs memory
+  - Each socket uses RAM
 
 ---
 
 # Exercise
 
-* Ensure network cable connected to devkit
-* Initialize Ethernet peripheral with embassy-stm32
-* Configure embassy-net with DHCP
-* Create TCP client to send xl data (3xf32 as little endian)
-* Send accelerometer readings
+* Connect network cable to devkit
+* Initialize stm32h5 ethernet driver
+  ```rust
+      let mac_addr = [0x00, 0x00, 0xDE, 0xAD, 0xBE, 0xEF];
+      static PACKETS: StaticCell<PacketQueue<4, 4>> = StaticCell::new();
+      let device = Ethernet::new(
+          PACKETS.init(PacketQueue::<4, 4>::new()),
+          p.eth,
+          Irqs,
+          p.pa1, p.pa7, p.pc4, p.pc5, p.pg13, p.pb15, p.pg11, mac_addr, p.eth_sma, p.pa2, p.pc1,
+      );
+  ```
+* Configure embassy-net 
+* Create TCP socket
+* Connect to IP X.X.X.X
+* Send accelerometer data (3xf32 as little endian)

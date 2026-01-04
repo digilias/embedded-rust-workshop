@@ -67,9 +67,6 @@ use panic_halt as _;
 
 ```rust
 unsafe extern "C" fn RealHardFault(sp: *const u8) -> ! {
-    // Try to save the time so it survives across the crash...
-    crate::time::persist_save();
-
     // If logbuf is already frozen, don't log anything.
     if log::is_frozen() {
         cortex_m::peripheral::SCB::sys_reset();
@@ -86,6 +83,7 @@ unsafe extern "C" fn RealHardFault(sp: *const u8) -> ! {
     #[cfg(feature = "trace")]
     ak::trace::print();
 
+    // Dump some stack
     error!("HardFault! stack dump: {=[u8]:x}", slice::from_raw_parts(sp, 1024));
 
     // Freeze logbuf
@@ -112,6 +110,8 @@ unsafe extern "C" fn RealHardFault(sp: *const u8) -> ! {
 * Logs are encoded using symbols
 * Logs are decoded using symbols 
 
+---
+
 # `defmt` - example
 
 ```rust
@@ -119,8 +119,18 @@ let val = 42;
 defmt::info!("Hello {}", val);
 ```
 
-```rust
-
-```
+---
 
 # debugging
+
+* `probe-rs gdb` - start GDB server that you can attach to
+* `probe-rs debug` - start very basic debugger CLI 
+
+---
+
+# Exercise
+
+* Add some logging statements to your application
+* Try probe-rs debug with the application
+* Try probe-rs gdb with the application
+* Try different panic handlers
