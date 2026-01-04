@@ -52,12 +52,7 @@ async fn main(s: Spawner) {
     s.spawn(consumer(CHANNEL.receiver()).unwrap());
 }
 
-struct Sample {
-    x: f32,
-    y: f32,
-    z: f32,
-}
-
+use lowpass_filter_sys::{Sample, LowpassFilter, lowpass_filter_init, lowpass_filter_apply};
 
 #[embassy_executor::task]
 async fn producer(mut xl: Lis3dh<Lis3dhI2C<I2c<'static, Async, i2c::Master>>>, sender: Sender<'static, ThreadModeRawMutex, Sample, 10>, mut irq: ExtiInput<'static>) {
@@ -80,14 +75,20 @@ async fn producer(mut xl: Lis3dh<Lis3dhI2C<I2c<'static, Async, i2c::Master>>>, s
     }).await);
 
 
+    use core::mem::MaybeUninit;
+    let mut filter: MaybeUninit<LowpassFilter> = MaybeUninit::uninit();
+    unsafe { lowpass_filter_init(filter.as_mut_ptr(), 0.2) };
     loop {
         let _ = irq.wait_for_high().await;
         let s = xl.accel_norm().await.unwrap();
-        sender.send(Sample {
+        let s = Sample {
             x: s.x,
             y: s.y,
             z: s.z,
-        }).await;
+        };
+        let filtered = unsafe { lowpass_filter_apply(filter.as_mut_ptr(), s) };
+
+        sender.send(filtered).await;
     }
 }
 

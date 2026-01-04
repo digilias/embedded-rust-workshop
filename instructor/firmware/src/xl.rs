@@ -1,7 +1,7 @@
 use embedded_hal_async::i2c::I2c;
 use embedded_hal_async::digital::Wait;
 use embedded_hal::digital::InputPin;
-use lis3dh_async::{Lis3dh, Lis3dhI2C, Lis3dhCore, Register, SlaveAddr, Configuration, Range, Interrupt1, InterruptMode, Mode, DataRate, InterruptConfig, IrqPin1Config, Threshold, Duration, Error};
+use lis3dh_async::{Lis3dh, Lis3dhI2C, SlaveAddr, Configuration, Interrupt1, InterruptMode, Mode, DataRate, InterruptConfig, IrqPin1Config, Error};
 use crate::board::{XlResources, Irqs};
 use embassy_stm32::i2c::{I2c as I2cPeripheral, Master};
 use embassy_stm32::mode::Async;
@@ -18,9 +18,9 @@ type IrqType = ExtiInput<'static>;
 pub struct Accel<I: I2c, IRQ: Wait + InputPin> {
     xl: Lis3dh<Lis3dhI2C<I>>,
     irq: IRQ,
-    filter_state: Option<Sample>,
-    alpha: f32,
+    filter: LowpassFilter,
 }
+
 
 #[derive(Clone, Copy, defmt::Format)]
 pub struct Sample {
@@ -58,12 +58,38 @@ impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
         Ok(Self {
             xl,
             irq,
-            filter_state: None,
-            alpha: 0.1, // Lower value -> smoother but more delay
+            filter: LowpassFilter::new(0.1), // Lower value -> smoother but more delay
         })
     }
 
-    fn apply_low_pass_filter(&mut self, raw_sample: Sample) -> Sample {
+    pub async fn sample(&mut self) -> Result<Sample, Error<I::Error>> {
+        let _ = self.irq.wait_for_high().await;
+        let raw_sample = self.xl.accel_norm().await?;
+        let raw_sample = Sample {
+            x: raw_sample.x,
+            y: raw_sample.y,
+            z: raw_sample.z,
+        };
+        let filtered_sample = self.filter.apply(raw_sample);
+        Ok(filtered_sample)
+    }
+}
+
+
+struct LowpassFilter {
+    filter_state: Option<Sample>,
+    alpha: f32,
+}
+
+impl LowpassFilter {
+    fn new(alpha: f32) -> Self {
+        Self {
+            filter_state: None,
+            alpha,
+        }
+    }
+
+    fn apply(&mut self, raw_sample: Sample) -> Sample {
         match self.filter_state {
             None => {
                 // First sample, initialize filter state
@@ -82,19 +108,8 @@ impl<I: I2c, IRQ: Wait + InputPin> Accel<I, IRQ> {
             }
         }
     }
-
-    pub async fn sample(&mut self) -> Result<Sample, Error<I::Error>> {
-        let _ = self.irq.wait_for_high().await;
-        let raw_sample = self.xl.accel_norm().await?;
-        let raw_sample = Sample {
-            x: raw_sample.x,
-            y: raw_sample.y,
-            z: raw_sample.z,
-        };
-        let filtered_sample = self.apply_low_pass_filter(raw_sample);
-        Ok(filtered_sample)
-    }
 }
+
 
 pub type SampleStream = Receiver<'static, ThreadModeRawMutex, Sample, 10>;
 static STREAM: Channel<ThreadModeRawMutex, Sample, 10> = Channel::new();

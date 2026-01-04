@@ -166,8 +166,4 @@ impl Drop for MathLib {
 
 # Exercise
 
-* Wrap a simple C math library (in snippets)
-* Use `cc` crate to build C code
-* Create safe Rust API around unsafe C functions
-* Handle C error codes properly
-* Test on hardware
+* Make use of the lowpass_filter library in the `practice/libs` folder
