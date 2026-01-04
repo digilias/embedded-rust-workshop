@@ -10,7 +10,7 @@ use embassy_stm32::gpio::Pull;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::{Channel, Sender, Receiver};
 use embassy_executor::Spawner;
-use defmt::{unwrap, warn};
+use defmt::warn;
 
 type I2cType = I2cPeripheral<'static, Async, Master>;
 type IrqType = ExtiInput<'static>;
@@ -129,7 +129,7 @@ pub async fn init(p: XlResources, s: Spawner) -> Result<SampleStream, Error<emba
 
     let xl = Accel::new(i2c, input).await?;
 
-    s.spawn(unwrap!(run(xl, STREAM.sender())));
+    s.must_spawn(run(xl, STREAM.sender()));
     Ok(STREAM.receiver())
 }
 

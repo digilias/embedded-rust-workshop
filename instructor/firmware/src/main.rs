@@ -18,5 +18,5 @@ async fn main(spawner: Spawner) {
     let net = net::init(board.net, &spawner).await;
     let app = app::init(stream, net);
 
-    spawner.spawn(unwrap!(app::run(app)));
+    spawner.must_spawn(app::run(app));
 }

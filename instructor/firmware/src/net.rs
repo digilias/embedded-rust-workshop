@@ -79,7 +79,7 @@ pub async fn init(p: NetResources, spawner: &Spawner) -> Net {
     static RESOURCES: StaticCell<StackResources<3>> = StaticCell::new();
     let (stack, runner) = embassy_net::new(device, config, RESOURCES.init(StackResources::new()), seed);
 
-    spawner.spawn(net_task(runner).unwrap());
+    spawner.must_spawn(net_task(runner));
 
     // Ensure DHCP configuration is up before trying connect
     stack.wait_config_up().await;
