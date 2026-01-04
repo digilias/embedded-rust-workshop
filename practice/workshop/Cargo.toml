@@ -37,7 +37,7 @@ stm32-fmc = "0.3.0"
 embedded-storage = "0.3.1"
 static_cell = "2"
 
-lowpass_filter_sys = { path = "../libs/lowpass_filter" }
+#lowpass_filter_sys = { path = "../libs/lowpass_filter" }
 
 # cargo build/run
 [profile.dev]
