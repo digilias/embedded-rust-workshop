@@ -62,6 +62,8 @@ struct ShapeGeometry {
     edge_indices: Vec<u16>,
 }
 
+const MAX_INSTANCES: usize = 64;
+
 pub struct Renderer {
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
@@ -73,6 +75,7 @@ pub struct Renderer {
     shape_buffers: HashMap<Shape, (wgpu::Buffer, wgpu::Buffer, u32, wgpu::Buffer, u32)>,
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
+    uniform_alignment: u32,
     depth_texture: wgpu::TextureView,
     instances: Vec<ShapeInstance>,
 }
@@ -134,9 +137,14 @@ impl Renderer {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
+        // Calculate aligned uniform size (must be multiple of 256 for dynamic uniform buffers)
+        let uniform_size = std::mem::size_of::<UniformData>() as u32;
+        let uniform_alignment = 256u32; // wgpu requires 256-byte alignment for dynamic offsets
+        let aligned_uniform_size = (uniform_size + uniform_alignment - 1) & !(uniform_alignment - 1);
+
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Uniform Buffer"),
-            size: std::mem::size_of::<UniformData>() as u64,
+            size: (aligned_uniform_size as usize * MAX_INSTANCES) as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -148,8 +156,8 @@ impl Renderer {
                     visibility: wgpu::ShaderStages::VERTEX,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                        has_dynamic_offset: true,
+                        min_binding_size: wgpu::BufferSize::new(uniform_size as u64),
                     },
                     count: None,
                 }],
@@ -160,7 +168,11 @@ impl Renderer {
             layout: &uniform_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &uniform_buffer,
+                    offset: 0,
+                    size: wgpu::BufferSize::new(uniform_size as u64),
+                }),
             }],
             label: Some("uniform_bind_group"),
         });
@@ -303,6 +315,7 @@ impl Renderer {
             shape_buffers,
             uniform_buffer,
             uniform_bind_group,
+            uniform_alignment: aligned_uniform_size,
             depth_texture,
             instances: Vec::new(),
         }
@@ -668,6 +681,38 @@ impl Renderer {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
+        // Set up view projection matrix
+        let aspect = self.config.width as f32 / self.config.height as f32;
+        let camera_view = Matrix4::look_at_rh(
+            Point3::new(0.0, 0.0, 30.0),
+            Point3::new(0.0, 0.0, 0.0),
+            Vector3::unit_y(),
+        );
+        let proj = cgmath::perspective(Deg(45.0), aspect, 0.1, 100.0);
+        let view_proj = proj * camera_view;
+
+        // Write all uniform data BEFORE creating the render pass
+        for (index, instance) in self.instances.iter().enumerate() {
+            let translation = Matrix4::from_translation(instance.position);
+            let rotation = Matrix4::from_angle_x(Rad(instance.rotation.x))
+                * Matrix4::from_angle_y(Rad(instance.rotation.y))
+                * Matrix4::from_angle_z(Rad(instance.rotation.z));
+            let scale = Matrix4::from_scale(instance.scale);
+            let model = translation * rotation * scale;
+
+            let uniform_data = UniformData {
+                view_proj: view_proj.into(),
+                model: model.into(),
+            };
+
+            let offset = (index as u64) * (self.uniform_alignment as u64);
+            self.queue.write_buffer(
+                &self.uniform_buffer,
+                offset,
+                bytemuck::cast_slice(&[uniform_data]),
+            );
+        }
+
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -702,39 +747,12 @@ impl Renderer {
                 timestamp_writes: None,
             });
 
-            // Set up view projection matrix
-            let aspect = self.config.width as f32 / self.config.height as f32;
-            let view = Matrix4::look_at_rh(
-                Point3::new(0.0, 5.0, 10.0),
-                Point3::new(0.0, 0.0, 0.0),
-                Vector3::unit_y(),
-            );
-            let proj = cgmath::perspective(Deg(45.0), aspect, 0.1, 100.0);
-            let view_proj = proj * view;
-
             // First pass: render filled shapes
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
 
-            for instance in &self.instances {
-                // Create transformation matrix for this instance
-                let translation = Matrix4::from_translation(instance.position);
-                let rotation = Matrix4::from_angle_x(Rad(instance.rotation.x))
-                    * Matrix4::from_angle_y(Rad(instance.rotation.y))
-                    * Matrix4::from_angle_z(Rad(instance.rotation.z));
-                let scale = Matrix4::from_scale(instance.scale);
-                let model = translation * rotation * scale;
-
-                let uniform_data = UniformData {
-                    view_proj: view_proj.into(),
-                    model: model.into(),
-                };
-
-                self.queue.write_buffer(
-                    &self.uniform_buffer,
-                    0,
-                    bytemuck::cast_slice(&[uniform_data]),
-                );
+            for (index, instance) in self.instances.iter().enumerate() {
+                let dynamic_offset = (index as u32) * self.uniform_alignment;
+                render_pass.set_bind_group(0, &self.uniform_bind_group, &[dynamic_offset]);
 
                 // Draw the appropriate shape
                 if let Some((vertex_buffer, index_buffer, index_count, _, _)) =
@@ -747,27 +765,10 @@ impl Renderer {
 
             // Second pass: render wireframe outlines
             render_pass.set_pipeline(&self.wireframe_pipeline);
-            render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
 
-            for instance in &self.instances {
-                // Create transformation matrix for this instance
-                let translation = Matrix4::from_translation(instance.position);
-                let rotation = Matrix4::from_angle_x(Rad(instance.rotation.x))
-                    * Matrix4::from_angle_y(Rad(instance.rotation.y))
-                    * Matrix4::from_angle_z(Rad(instance.rotation.z));
-                let scale = Matrix4::from_scale(instance.scale);
-                let model = translation * rotation * scale;
-
-                let uniform_data = UniformData {
-                    view_proj: view_proj.into(),
-                    model: model.into(),
-                };
-
-                self.queue.write_buffer(
-                    &self.uniform_buffer,
-                    0,
-                    bytemuck::cast_slice(&[uniform_data]),
-                );
+            for (index, instance) in self.instances.iter().enumerate() {
+                let dynamic_offset = (index as u32) * self.uniform_alignment;
+                render_pass.set_bind_group(0, &self.uniform_bind_group, &[dynamic_offset]);
 
                 // Draw wireframe using edge indices
                 if let Some((vertex_buffer, _, _, edge_buffer, edge_count)) =

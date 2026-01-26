@@ -3,10 +3,12 @@ use crate::board::{NetResources, Irqs};
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_net::tcp::{self, client::{TcpClient, TcpClientState, TcpConnection}};
-use embassy_net::{Stack, StackResources};
+use embassy_net::{Ipv4Cidr, Stack, StackResources};
 use embassy_stm32::eth::{Ethernet, GenericPhy, PacketQueue, Sma};
 use embassy_stm32::peripherals::{ETH_SMA, ETH};
 use embassy_stm32::rng::Rng;
+use heapless::Vec;
+use core::net::Ipv4Addr;
 use static_cell::StaticCell;
 
 type Device = Ethernet<'static, ETH, GenericPhy<Sma<'static, ETH_SMA>>>;
@@ -68,12 +70,12 @@ pub async fn init(p: NetResources, spawner: &Spawner) -> Net {
     rng.fill_bytes(&mut seed);
     let seed = u64::from_le_bytes(seed);
 
-    let config = embassy_net::Config::dhcpv4(Default::default());
-    //let config = embassy_net::Config::ipv4_static(embassy_net::StaticConfigV4 {
-    //    address: Ipv4Cidr::new(Ipv4Address::new(10, 42, 0, 61), 24),
-    //    dns_servers: Vec::new(),
-    //    gateway: Some(Ipv4Address::new(10, 42, 0, 1)),
-    //});
+    // let config = embassy_net::Config::dhcpv4(Default::default());
+    let config = embassy_net::Config::ipv4_static(embassy_net::StaticConfigV4 {
+        address: Ipv4Cidr::new(Ipv4Addr::new(10, 0, 0, 2), 24),
+        dns_servers: Vec::new(),
+        gateway: Some(Ipv4Addr::new(10, 0, 0, 1)),
+    });
 
     // Init network stack
     static RESOURCES: StaticCell<StackResources<3>> = StaticCell::new();

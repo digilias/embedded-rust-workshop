@@ -26,14 +26,49 @@ type ClientData = Arc<RwLock<HashMap<std::net::IpAddr, (Shape, ClientRotation)>>
 async fn main() {
     env_logger::init();
 
+    let test_mode = std::env::args().any(|arg| arg == "--test");
+
     // Shared data between TCP server and renderer
     let clients: ClientData = Arc::new(RwLock::new(HashMap::new()));
 
-    // Spawn TCP server
-    let clients_tcp = clients.clone();
-    tokio::spawn(async move {
-        tcp_server(clients_tcp).await;
-    });
+    if test_mode {
+        log::info!("Running in test mode with 10 simulated clients");
+
+        // Create 10 test clients with different shapes
+        {
+            let mut clients_guard = clients.write().await;
+            let shapes = [Shape::Cube, Shape::Pyramid, Shape::Torus, Shape::Cylinder];
+
+            for i in 0..10 {
+                // Create fake IP addresses: 192.168.0.1 through 192.168.0.10
+                let ip: std::net::IpAddr = format!("192.168.0.{}", i + 1).parse().unwrap();
+                let shape = shapes[i % shapes.len()].clone();
+                clients_guard.insert(ip, (shape, ClientRotation { x: 0.0, y: 0.0, z: 0.0 }));
+            }
+            log::info!("Created {} test clients", clients_guard.len());
+        }
+
+        // Spawn task to slowly rotate all test shapes
+        let clients_rotate = clients.clone();
+        tokio::spawn(async move {
+            let mut angle: f32 = 0.0;
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_millis(16)).await; // ~60fps
+                angle += 0.02; // Slow rotation speed
+
+                let mut clients_guard = clients_rotate.write().await;
+                for (_ip, (_shape, rotation)) in clients_guard.iter_mut() {
+                    rotation.y = angle;
+                }
+            }
+        });
+    } else {
+        // Spawn TCP server in normal mode
+        let clients_tcp = clients.clone();
+        tokio::spawn(async move {
+            tcp_server(clients_tcp).await;
+        });
+    }
 
     // Run the rendering loop
     run_renderer(clients).await;
@@ -68,13 +103,15 @@ async fn handle_client(mut stream: TcpStream, addr: SocketAddr, clients: ClientD
     let client_ip = addr.ip();
 
     // Get or create shape for this IP
-    let shape = {
+    {
         let mut clients_guard = clients.write().await;
 
         if let Some((shape, _)) = clients_guard.get(&client_ip) {
             // Reuse existing shape for this IP
-            log::info!("Client {} reconnected, reusing existing shape: {:?}", addr, shape);
-            shape.clone()
+            log::info!("Client {} reconnected (IP: {}), reusing existing shape: {:?}", addr, client_ip, shape);
+            log::info!("Total clients in HashMap: {} - IPs: {:?}",
+                clients_guard.len(),
+                clients_guard.keys().collect::<Vec<_>>());
         } else {
             // Create new random shape for new IP
             use rand::Rng;
@@ -91,9 +128,11 @@ async fn handle_client(mut stream: TcpStream, addr: SocketAddr, clients: ClientD
                 (shape.clone(), ClientRotation { x: 0.0, y: 0.0, z: 0.0 })
             );
             log::info!("Client {} assigned new shape: {:?}", addr, shape);
-            shape
+            log::info!("Total clients in HashMap: {} - IPs: {:?}",
+                clients_guard.len(),
+                clients_guard.keys().collect::<Vec<_>>());
         }
-    };
+    }
 
     // Buffer for reading 3 f32 values (12 bytes total)
     let mut buffer = [0u8; 12];
@@ -106,13 +145,20 @@ async fn handle_client(mut stream: TcpStream, addr: SocketAddr, clients: ClientD
                 let y = f32::from_le_bytes([buffer[4], buffer[5], buffer[6], buffer[7]]);
                 let z = f32::from_le_bytes([buffer[8], buffer[9], buffer[10], buffer[11]]);
 
+                // Check for invalid values
+                if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                    log::warn!("Client {} sent invalid rotation: ({}, {}, {}) - raw bytes: {:02x?}",
+                        addr, x, y, z, &buffer);
+                    continue;
+                }
+
                 // Update rotation
                 let mut clients_guard = clients.write().await;
                 if let Some(client) = clients_guard.get_mut(&client_ip) {
                     client.1 = ClientRotation { x, y, z };
                 }
 
-                log::debug!("Updated rotation for {}: ({:.3}, {:.3}, {:.3})", addr, x, y, z);
+                log::trace!("Updated rotation for {}: ({:.3}, {:.3}, {:.3})", addr, x, y, z);
             }
             Err(e) => {
                 log::info!("Client {} disconnected: {}", addr, e);
@@ -152,6 +198,7 @@ async fn run_renderer(clients: ClientData) {
                         let instances = {
                             if let Ok(clients_guard) = clients.try_read() {
                                 let num_clients = clients_guard.len();
+                                log::trace!("Rendering {} clients", num_clients);
 
                                 // Calculate scale based on number of sensors
                                 // More sensors = smaller objects to fit in view
@@ -169,19 +216,26 @@ async fn run_renderer(clients: ClientData) {
                                 sorted_clients
                                     .iter()
                                     .enumerate()
-                                    .map(|(index, (_ip, (shape, rotation)))| {
-                                        // Calculate position in a grid
-                                        let cols = (num_clients as f32).sqrt().ceil() as i32;
+                                    .map(|(index, (ip, (shape, rotation)))| {
+                                        // Calculate grid dimensions for 16:10 aspect ratio
+                                        let aspect_ratio = 16.0 / 10.0;
+                                        let rows = ((num_clients as f32) / aspect_ratio).sqrt().ceil() as i32;
+                                        let cols = ((num_clients as f32) / rows as f32).ceil() as i32;
+
                                         let row = (index as i32) / cols;
                                         let col = (index as i32) % cols;
 
-                                        let spacing = 3.0;
-                                        let x = (col as f32 - (cols - 1) as f32 / 2.0) * spacing;
-                                        let z = (row as f32) * spacing - 2.0;
+                                        let spacing_x = 4.0;
+                                        let spacing_y = 4.0;
+                                        let x = (col as f32 - (cols - 1) as f32 / 2.0) * spacing_x;
+                                        let y = ((rows - 1) as f32 / 2.0 - row as f32) * spacing_y;
+
+                                        log::trace!("Instance {}: IP={}, shape={:?}, pos=({:.1},{:.1},{:.1}), rot=({:.2},{:.2},{:.2})",
+                                            index, ip, shape, x, y, 0.0, rotation.x, rotation.y, rotation.z);
 
                                         ShapeInstance {
                                             shape: shape.clone(),
-                                            position: Vector3::new(x, 0.0, z),
+                                            position: Vector3::new(x, y, 0.0),
                                             rotation: Vector3::new(rotation.x, rotation.y, rotation.z),
                                             scale,
                                         }
