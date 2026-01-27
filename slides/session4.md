@@ -8,7 +8,7 @@ color: #333
 
 # Session 4: More on HAL
 
-*  **Goal:** Using embassy-stm32 as HAL for the device-driver application.
+*  **Goal:** Exploring what the HAL provides.
 
 ---
 # HAL philosophy

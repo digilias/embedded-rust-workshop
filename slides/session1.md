@@ -55,12 +55,10 @@ color: #333
 * Session 13: Networking
 
 ---
-# Devkit wiring
 
 ![bg](wiring1.jpg)
 
 ---
-# Devkit wiring
 
 ![bg](wiring2.jpg)
 
