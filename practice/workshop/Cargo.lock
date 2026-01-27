@@ -1486,7 +1486,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "workshop-firmware"
+name = "workshop"
 version = "0.1.0"
 dependencies = [
  "assign-resources",

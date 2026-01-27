@@ -31,8 +31,28 @@ color: #333
 * Located in the `practice/workshop` folder
 * We will use this throughout the workshop and update it
 * Contains necessary deps in `Cargo.toml`
-* Help snippets can be found in `practice/snippets` - please use these if you get stuck
+* Help snippets can be found in `practice/.cheating` - please use these if you get stuck
 * `practice/workshop/README.md` contains references to relevant docs for each session
+* We will do exercises together
+
+---
+# Sessions (part 1)
+
+* Session 2: PAC and HAL
+* Session 3: Platform agnostic drivers
+* Session 4: More HAL
+* Session 5: Interrupts
+* Session 6: Async fundamentals
+* Session 7: Async and Interrupts
+
+---
+# Sessions (part 2)
+* Session 8: Embassy
+* Session 9: Sharing state
+* Session 10: Executor and preemption
+* Session 11: Panicking, logging, debugging
+* Session 12: C with your Rust
+* Session 13: Networking
 
 ---
 # Devkit wiring

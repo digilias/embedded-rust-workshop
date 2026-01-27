@@ -1,6 +1,6 @@
 [package]
 edition = "2024"
-name = "workshop-firmware"
+name = "workshop"
 version = "0.1.0"
 authors = [ "Ulf Lilleengen <ulf@digili.no>" ]
 license = "MIT OR Apache-2.0"
