@@ -225,10 +225,10 @@ async fn run_renderer(clients: ClientData) {
                                         let row = (index as i32) / cols;
                                         let col = (index as i32) % cols;
 
-                                        let spacing_x = 4.0;
-                                        let spacing_y = 4.0;
-                                        let x = (col as f32 - (cols - 1) as f32 / 2.0) * spacing_x;
-                                        let y = ((rows - 1) as f32 / 2.0 - row as f32) * spacing_y;
+                                        // Spacing should be proportional to scale to prevent overlap
+                                        let spacing = scale * 2.0;
+                                        let x = (col as f32 - (cols - 1) as f32 / 2.0) * spacing;
+                                        let y = ((rows - 1) as f32 / 2.0 - row as f32) * spacing;
 
                                         log::trace!("Instance {}: IP={}, shape={:?}, pos=({:.1},{:.1},{:.1}), rot=({:.2},{:.2},{:.2})",
                                             index, ip, shape, x, y, 0.0, rotation.x, rotation.y, rotation.z);
@@ -238,6 +238,7 @@ async fn run_renderer(clients: ClientData) {
                                             position: Vector3::new(x, y, 0.0),
                                             rotation: Vector3::new(rotation.x, rotation.y, rotation.z),
                                             scale,
+                                            label: ip.to_string(),
                                         }
                                     })
                                     .collect()

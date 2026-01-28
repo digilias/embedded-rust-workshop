@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../libs/lowpass_filter"
+		},
+		{
+			"path": "../../slides"
 		}
 	],
 	"settings": {

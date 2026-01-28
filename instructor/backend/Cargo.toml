@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.40", features = ["full"] }
-wgpu = "0.20"
+wgpu = "22"
 winit = "0.30"
 cgmath = "0.18"
 bytemuck = { version = "1.16", features = ["derive"] }
@@ -13,6 +13,7 @@ env_logger = "0.11"
 log = "0.4"
 pollster = "0.3"
 rand = "0.8"
+glyphon = "0.6"
 
 [[bin]]
 name = "tcp-3d-viewer"

@@ -72,7 +72,7 @@ pub async fn init(p: NetResources, spawner: &Spawner) -> Net {
 
     // let config = embassy_net::Config::dhcpv4(Default::default());
     let config = embassy_net::Config::ipv4_static(embassy_net::StaticConfigV4 {
-        address: Ipv4Cidr::new(Ipv4Addr::new(10, 0, 0, 2), 24),
+        address: Ipv4Cidr::new(Ipv4Addr::new(10, 0, 0, 3), 24),
         dns_servers: Vec::new(),
         gateway: Some(Ipv4Addr::new(10, 0, 0, 1)),
     });

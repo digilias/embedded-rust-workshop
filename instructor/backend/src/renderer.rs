@@ -1,5 +1,9 @@
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Matrix4, Point3, Rad, Vector3, Deg};
+use cgmath::{Matrix4, Point3, Rad, Vector3, Vector4, Deg};
+use glyphon::{
+    Attrs, Buffer, Cache, Color, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache,
+    TextArea, TextAtlas, TextBounds, TextRenderer, Viewport,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
@@ -54,6 +58,7 @@ pub struct ShapeInstance {
     pub position: Vector3<f32>,
     pub rotation: Vector3<f32>,
     pub scale: f32,
+    pub label: String,
 }
 
 struct ShapeGeometry {
@@ -78,6 +83,13 @@ pub struct Renderer {
     uniform_alignment: u32,
     depth_texture: wgpu::TextureView,
     instances: Vec<ShapeInstance>,
+    // Text rendering
+    font_system: FontSystem,
+    swash_cache: SwashCache,
+    glyphon_cache: Cache,
+    text_atlas: TextAtlas,
+    text_renderer: TextRenderer,
+    viewport: Viewport,
 }
 
 impl Renderer {
@@ -106,6 +118,7 @@ impl Renderer {
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
                     label: None,
+                    memory_hints: wgpu::MemoryHints::default(),
                 },
                 None,
             )
@@ -225,6 +238,7 @@ impl Renderer {
                 alpha_to_coverage_enabled: false,
             },
             multiview: None,
+            cache: None,
         });
 
         // Create wireframe pipeline for outlines
@@ -269,6 +283,7 @@ impl Renderer {
                 alpha_to_coverage_enabled: false,
             },
             multiview: None,
+            cache: None,
         });
 
         let depth_texture = Self::create_depth_texture(&device, &config);
@@ -304,6 +319,25 @@ impl Renderer {
             );
         }
 
+        // Initialize text rendering
+        let font_system = FontSystem::new();
+        let swash_cache = SwashCache::new();
+        let glyphon_cache = Cache::new(&device);
+        let mut text_atlas = TextAtlas::new(&device, &queue, &glyphon_cache, surface_format);
+        let text_renderer = TextRenderer::new(
+            &mut text_atlas,
+            &device,
+            wgpu::MultisampleState::default(),
+            Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: false,
+                depth_compare: wgpu::CompareFunction::Always,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
+        );
+        let viewport = Viewport::new(&device, &glyphon_cache);
+
         Self {
             surface,
             device,
@@ -318,6 +352,12 @@ impl Renderer {
             uniform_alignment: aligned_uniform_size,
             depth_texture,
             instances: Vec::new(),
+            font_system,
+            swash_cache,
+            glyphon_cache,
+            text_atlas,
+            text_renderer,
+            viewport,
         }
     }
 
@@ -713,6 +753,86 @@ impl Renderer {
             );
         }
 
+        // Prepare text buffers for labels
+        let mut text_buffers: Vec<Buffer> = Vec::new();
+        let width = self.config.width as f32;
+        let height = self.config.height as f32;
+
+        for instance in &self.instances {
+            // Project 3D position to screen coordinates
+            let pos = instance.position;
+            let clip_pos = view_proj * Vector4::new(pos.x, pos.y, pos.z, 1.0);
+            let ndc_x = clip_pos.x / clip_pos.w;
+            let ndc_y = clip_pos.y / clip_pos.w;
+            let _screen_x = (ndc_x + 1.0) * 0.5 * width;
+            let _screen_y = (1.0 - ndc_y) * 0.5 * height;
+
+            // Create text buffer for this label
+            let mut buffer = Buffer::new(&mut self.font_system, Metrics::new(16.0, 18.0));
+            buffer.set_size(&mut self.font_system, Some(200.0), Some(30.0));
+            buffer.set_text(
+                &mut self.font_system,
+                &instance.label,
+                Attrs::new().family(Family::SansSerif),
+                Shaping::Advanced,
+            );
+            buffer.shape_until_scroll(&mut self.font_system, false);
+            text_buffers.push(buffer);
+        }
+
+        // Update viewport resolution
+        self.viewport.update(
+            &self.queue,
+            Resolution {
+                width: self.config.width,
+                height: self.config.height,
+            },
+        );
+
+        // Prepare text areas with screen positions
+        let text_areas: Vec<TextArea> = self
+            .instances
+            .iter()
+            .zip(text_buffers.iter())
+            .map(|(instance, buffer)| {
+                // Project a point below the shape (accounting for scale) to position text
+                let text_world_y = instance.position.y - instance.scale * 0.8;
+                let clip_pos = view_proj * Vector4::new(instance.position.x, text_world_y, instance.position.z, 1.0);
+                let ndc_x = clip_pos.x / clip_pos.w;
+                let ndc_y = clip_pos.y / clip_pos.w;
+                let screen_x = (ndc_x + 1.0) * 0.5 * width;
+                let screen_y = (1.0 - ndc_y) * 0.5 * height;
+
+                TextArea {
+                    buffer,
+                    left: screen_x - 50.0,
+                    top: screen_y,
+                    scale: 1.0,
+                    bounds: TextBounds {
+                        left: 0,
+                        top: 0,
+                        right: self.config.width as i32,
+                        bottom: self.config.height as i32,
+                    },
+                    default_color: Color::rgb(255, 255, 255),
+                    custom_glyphs: &[],
+                }
+            })
+            .collect();
+
+        // Prepare text renderer
+        self.text_renderer
+            .prepare(
+                &self.device,
+                &self.queue,
+                &mut self.font_system,
+                &mut self.text_atlas,
+                &self.viewport,
+                text_areas,
+                &mut self.swash_cache,
+            )
+            .expect("Failed to prepare text");
+
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -778,6 +898,11 @@ impl Renderer {
                     render_pass.draw_indexed(0..*edge_count, 0, 0..1);
                 }
             }
+
+            // Third pass: render text labels
+            self.text_renderer
+                .render(&self.text_atlas, &self.viewport, &mut render_pass)
+                .expect("Failed to render text");
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
