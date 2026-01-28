@@ -37,12 +37,11 @@ async fn main() {
         // Create 10 test clients with different shapes
         {
             let mut clients_guard = clients.write().await;
-            let shapes = [Shape::Cube, Shape::Pyramid, Shape::Torus, Shape::Cylinder];
 
             for i in 0..10 {
                 // Create fake IP addresses: 192.168.0.1 through 192.168.0.10
                 let ip: std::net::IpAddr = format!("192.168.0.{}", i + 1).parse().unwrap();
-                let shape = shapes[i % shapes.len()].clone();
+                let shape = Shape::from_index(i);
                 clients_guard.insert(ip, (shape, ClientRotation { x: 0.0, y: 0.0, z: 0.0 }));
             }
             log::info!("Created {} test clients", clients_guard.len());
@@ -116,12 +115,7 @@ async fn handle_client(mut stream: TcpStream, addr: SocketAddr, clients: ClientD
             // Create new random shape for new IP
             use rand::Rng;
             let mut rng = rand::thread_rng();
-            let shape = match rng.gen_range(0..4) {
-                0 => Shape::Cube,
-                1 => Shape::Pyramid,
-                2 => Shape::Torus,
-                _ => Shape::Cylinder,
-            };
+            let shape = Shape::from_index(rng.gen_range(0..Shape::count()));
 
             clients_guard.insert(
                 client_ip,

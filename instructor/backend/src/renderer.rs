@@ -50,6 +50,49 @@ pub enum Shape {
     Pyramid,
     Torus,
     Cylinder,
+    Sphere,
+    Cone,
+    Octahedron,
+    Prism,
+    HexPrism,
+    Diamond,
+}
+
+impl Shape {
+    pub fn count() -> usize {
+        10
+    }
+
+    pub fn from_index(index: usize) -> Shape {
+        match index % 10 {
+            0 => Shape::Cube,
+            1 => Shape::Pyramid,
+            2 => Shape::Torus,
+            3 => Shape::Cylinder,
+            4 => Shape::Sphere,
+            5 => Shape::Cone,
+            6 => Shape::Octahedron,
+            7 => Shape::Prism,
+            8 => Shape::HexPrism,
+            _ => Shape::Diamond,
+        }
+    }
+
+    /// Returns a fixed dark color for this shape (RGB values 0.0-1.0)
+    fn color(&self) -> [f32; 3] {
+        match self {
+            Shape::Cube => [0.7, 0.2, 0.2],       // Dark red
+            Shape::Pyramid => [0.2, 0.6, 0.2],    // Dark green
+            Shape::Torus => [0.2, 0.2, 0.7],      // Dark blue
+            Shape::Cylinder => [0.6, 0.6, 0.2],   // Dark yellow
+            Shape::Sphere => [0.6, 0.2, 0.6],     // Dark magenta
+            Shape::Cone => [0.2, 0.6, 0.6],       // Dark cyan
+            Shape::Octahedron => [0.7, 0.4, 0.2], // Dark orange
+            Shape::Prism => [0.4, 0.2, 0.6],      // Dark purple
+            Shape::HexPrism => [0.2, 0.5, 0.4],   // Dark teal
+            Shape::Diamond => [0.5, 0.3, 0.2],    // Dark brown
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -292,7 +335,11 @@ impl Renderer {
         let mut shape_buffers = HashMap::new();
 
         // Add all shapes
-        for shape_type in &[Shape::Cube, Shape::Pyramid, Shape::Torus, Shape::Cylinder] {
+        for shape_type in &[
+            Shape::Cube, Shape::Pyramid, Shape::Torus, Shape::Cylinder,
+            Shape::Sphere, Shape::Cone, Shape::Octahedron, Shape::Prism,
+            Shape::HexPrism, Shape::Diamond,
+        ] {
             let geometry = Self::create_shape_geometry(shape_type);
 
             let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -384,46 +431,53 @@ impl Renderer {
     }
 
     fn create_shape_geometry(shape: &Shape) -> ShapeGeometry {
+        let color = shape.color();
         match shape {
-            Shape::Cube => Self::create_cube(),
-            Shape::Pyramid => Self::create_pyramid(),
-            Shape::Torus => Self::create_torus(16, 8, 0.5, 0.2),
-            Shape::Cylinder => Self::create_cylinder(16),
+            Shape::Cube => Self::create_cube(color),
+            Shape::Pyramid => Self::create_pyramid(color),
+            Shape::Torus => Self::create_torus(16, 8, 0.5, 0.2, color),
+            Shape::Cylinder => Self::create_cylinder(16, color),
+            Shape::Sphere => Self::create_sphere(16, 12, color),
+            Shape::Cone => Self::create_cone(16, color),
+            Shape::Octahedron => Self::create_octahedron(color),
+            Shape::Prism => Self::create_prism(color),
+            Shape::HexPrism => Self::create_hex_prism(color),
+            Shape::Diamond => Self::create_diamond(color),
         }
     }
 
-    fn create_cube() -> ShapeGeometry {
+    fn create_cube(color: [f32; 3]) -> ShapeGeometry {
         let vertices = vec![
-            // Front face - red
-            Vertex { position: [-0.5, -0.5, 0.5], color: [1.0, 0.0, 0.0] },
-            Vertex { position: [0.5, -0.5, 0.5], color: [1.0, 0.0, 0.0] },
-            Vertex { position: [0.5, 0.5, 0.5], color: [1.0, 0.0, 0.0] },
-            Vertex { position: [-0.5, 0.5, 0.5], color: [1.0, 0.0, 0.0] },
-            // Back face - green
-            Vertex { position: [-0.5, -0.5, -0.5], color: [0.0, 1.0, 0.0] },
-            Vertex { position: [0.5, -0.5, -0.5], color: [0.0, 1.0, 0.0] },
-            Vertex { position: [0.5, 0.5, -0.5], color: [0.0, 1.0, 0.0] },
-            Vertex { position: [-0.5, 0.5, -0.5], color: [0.0, 1.0, 0.0] },
-            // Top face - blue
-            Vertex { position: [-0.5, 0.5, 0.5], color: [0.0, 0.0, 1.0] },
-            Vertex { position: [0.5, 0.5, 0.5], color: [0.0, 0.0, 1.0] },
-            Vertex { position: [0.5, 0.5, -0.5], color: [0.0, 0.0, 1.0] },
-            Vertex { position: [-0.5, 0.5, -0.5], color: [0.0, 0.0, 1.0] },
-            // Bottom face - yellow
-            Vertex { position: [-0.5, -0.5, 0.5], color: [1.0, 1.0, 0.0] },
-            Vertex { position: [0.5, -0.5, 0.5], color: [1.0, 1.0, 0.0] },
-            Vertex { position: [0.5, -0.5, -0.5], color: [1.0, 1.0, 0.0] },
-            Vertex { position: [-0.5, -0.5, -0.5], color: [1.0, 1.0, 0.0] },
-            // Right face - magenta
-            Vertex { position: [0.5, -0.5, 0.5], color: [1.0, 0.0, 1.0] },
-            Vertex { position: [0.5, -0.5, -0.5], color: [1.0, 0.0, 1.0] },
-            Vertex { position: [0.5, 0.5, -0.5], color: [1.0, 0.0, 1.0] },
-            Vertex { position: [0.5, 0.5, 0.5], color: [1.0, 0.0, 1.0] },
-            // Left face - cyan
-            Vertex { position: [-0.5, -0.5, 0.5], color: [0.0, 1.0, 1.0] },
-            Vertex { position: [-0.5, -0.5, -0.5], color: [0.0, 1.0, 1.0] },
-            Vertex { position: [-0.5, 0.5, -0.5], color: [0.0, 1.0, 1.0] },
-            Vertex { position: [-0.5, 0.5, 0.5], color: [0.0, 1.0, 1.0] },
+            // Front face
+            Vertex { position: [-0.5, -0.5, 0.5], color },
+            Vertex { position: [0.5, -0.5, 0.5], color },
+            Vertex { position: [0.5, 0.5, 0.5], color },
+            Vertex { position: [-0.5, 0.5, 0.5], color },
+            // Back face
+            Vertex { position: [-0.5, -0.5, -0.5], color },
+            Vertex { position: [0.5, -0.5, -0.5], color },
+            Vertex { position: [0.5, 0.5, -0.5], color },
+            Vertex { position: [-0.5, 0.5, -0.5], color },
+            // Top face
+            Vertex { position: [-0.5, 0.5, 0.5], color },
+            Vertex { position: [0.5, 0.5, 0.5], color },
+            Vertex { position: [0.5, 0.5, -0.5], color },
+            Vertex { position: [-0.5, 0.5, -0.5], color },
+            // Bottom face
+            Vertex { position: [-0.5, -0.5, 0.5], color },
+            Vertex { position: [0.5, -0.5, 0.5], color },
+            Vertex { position: [0.5, -0.5, -0.5], color },
+            Vertex { position: [-0.5, -0.5, -0.5], color },
+            // Right face
+            Vertex { position: [0.5, -0.5, 0.5], color },
+            Vertex { position: [0.5, -0.5, -0.5], color },
+            Vertex { position: [0.5, 0.5, -0.5], color },
+            Vertex { position: [0.5, 0.5, 0.5], color },
+            // Left face
+            Vertex { position: [-0.5, -0.5, 0.5], color },
+            Vertex { position: [-0.5, -0.5, -0.5], color },
+            Vertex { position: [-0.5, 0.5, -0.5], color },
+            Vertex { position: [-0.5, 0.5, 0.5], color },
         ];
 
         let indices = vec![
@@ -448,7 +502,7 @@ impl Renderer {
         ShapeGeometry { vertices, indices, edge_indices }
     }
 
-    fn create_sphere(segments: u32, rings: u32) -> ShapeGeometry {
+    fn create_sphere(segments: u32, rings: u32, color: [f32; 3]) -> ShapeGeometry {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
@@ -466,10 +520,9 @@ impl Renderer {
                 let y = cos_theta;
                 let z = sin_phi * sin_theta;
 
-                // Use position-based coloring
                 vertices.push(Vertex {
                     position: [x * 0.5, y * 0.5, z * 0.5],
-                    color: [(x + 1.0) * 0.5, (y + 1.0) * 0.5, (z + 1.0) * 0.5],
+                    color,
                 });
             }
         }
@@ -510,20 +563,20 @@ impl Renderer {
         ShapeGeometry { vertices, indices, edge_indices }
     }
 
-    fn create_pyramid() -> ShapeGeometry {
+    fn create_pyramid(color: [f32; 3]) -> ShapeGeometry {
         let vertices = vec![
-            // Base - green
-            Vertex { position: [-0.5, -0.5, -0.5], color: [0.0, 1.0, 0.0] },
-            Vertex { position: [0.5, -0.5, -0.5], color: [0.0, 1.0, 0.0] },
-            Vertex { position: [0.5, -0.5, 0.5], color: [0.0, 1.0, 0.0] },
-            Vertex { position: [-0.5, -0.5, 0.5], color: [0.0, 1.0, 0.0] },
-            // Apex - white
-            Vertex { position: [0.0, 0.5, 0.0], color: [1.0, 1.0, 1.0] },
-            // Side vertices with different colors
-            Vertex { position: [-0.5, -0.5, -0.5], color: [1.0, 0.0, 0.0] },
-            Vertex { position: [0.5, -0.5, -0.5], color: [0.0, 0.0, 1.0] },
-            Vertex { position: [0.5, -0.5, 0.5], color: [1.0, 1.0, 0.0] },
-            Vertex { position: [-0.5, -0.5, 0.5], color: [1.0, 0.0, 1.0] },
+            // Base
+            Vertex { position: [-0.5, -0.5, -0.5], color },
+            Vertex { position: [0.5, -0.5, -0.5], color },
+            Vertex { position: [0.5, -0.5, 0.5], color },
+            Vertex { position: [-0.5, -0.5, 0.5], color },
+            // Apex
+            Vertex { position: [0.0, 0.5, 0.0], color },
+            // Side vertices (duplicates for face normals)
+            Vertex { position: [-0.5, -0.5, -0.5], color },
+            Vertex { position: [0.5, -0.5, -0.5], color },
+            Vertex { position: [0.5, -0.5, 0.5], color },
+            Vertex { position: [-0.5, -0.5, 0.5], color },
         ];
 
         let indices = vec![
@@ -548,7 +601,7 @@ impl Renderer {
         ShapeGeometry { vertices, indices, edge_indices }
     }
 
-    fn create_torus(major_segments: u32, minor_segments: u32, major_radius: f32, minor_radius: f32) -> ShapeGeometry {
+    fn create_torus(major_segments: u32, minor_segments: u32, major_radius: f32, minor_radius: f32, color: [f32; 3]) -> ShapeGeometry {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
@@ -568,7 +621,7 @@ impl Renderer {
 
                 vertices.push(Vertex {
                     position: [x, y, z],
-                    color: [(cos_theta + 1.0) * 0.5, (sin_theta + 1.0) * 0.5, (cos_phi + 1.0) * 0.5],
+                    color,
                 });
             }
         }
@@ -609,7 +662,7 @@ impl Renderer {
         ShapeGeometry { vertices, indices, edge_indices }
     }
 
-    fn create_cylinder(segments: u32) -> ShapeGeometry {
+    fn create_cylinder(segments: u32, color: [f32; 3]) -> ShapeGeometry {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
 
@@ -622,12 +675,12 @@ impl Renderer {
             // Top circle
             vertices.push(Vertex {
                 position: [x, 0.5, z],
-                color: [0.0, 1.0, 1.0],
+                color,
             });
             // Bottom circle
             vertices.push(Vertex {
                 position: [x, -0.5, z],
-                color: [1.0, 0.0, 1.0],
+                color,
             });
         }
 
@@ -647,13 +700,13 @@ impl Renderer {
         let top_center = vertices.len() as u16;
         vertices.push(Vertex {
             position: [0.0, 0.5, 0.0],
-            color: [0.0, 1.0, 1.0],
+            color,
         });
-        
+
         let bottom_center = vertices.len() as u16;
         vertices.push(Vertex {
             position: [0.0, -0.5, 0.0],
-            color: [1.0, 0.0, 1.0],
+            color,
         });
 
         // Create top and bottom caps
@@ -696,6 +749,270 @@ impl Renderer {
             edge_indices.push(bottom_center);
             edge_indices.push(bottom);
         }
+
+        ShapeGeometry { vertices, indices, edge_indices }
+    }
+
+    fn create_cone(segments: u32, color: [f32; 3]) -> ShapeGeometry {
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+
+        // Apex
+        vertices.push(Vertex {
+            position: [0.0, 0.5, 0.0],
+            color,
+        });
+
+        // Base circle
+        for i in 0..=segments {
+            let angle = i as f32 * 2.0 * std::f32::consts::PI / segments as f32;
+            let x = angle.cos() * 0.5;
+            let z = angle.sin() * 0.5;
+            vertices.push(Vertex {
+                position: [x, -0.5, z],
+                color,
+            });
+        }
+
+        // Base center
+        let base_center = vertices.len() as u16;
+        vertices.push(Vertex {
+            position: [0.0, -0.5, 0.0],
+            color,
+        });
+
+        // Cone sides
+        for i in 0..segments {
+            indices.push(0); // apex
+            indices.push((i + 2) as u16);
+            indices.push((i + 1) as u16);
+        }
+
+        // Base cap
+        for i in 0..segments {
+            indices.push(base_center);
+            indices.push((i + 1) as u16);
+            indices.push((i + 2) as u16);
+        }
+
+        // Edge indices
+        let mut edge_indices = Vec::new();
+        for i in 0..segments {
+            // Edge from apex to base
+            edge_indices.push(0);
+            edge_indices.push((i + 1) as u16);
+
+            // Base rim
+            edge_indices.push((i + 1) as u16);
+            edge_indices.push((((i + 1) % segments) + 1) as u16);
+        }
+
+        ShapeGeometry { vertices, indices, edge_indices }
+    }
+
+    fn create_octahedron(color: [f32; 3]) -> ShapeGeometry {
+        let vertices = vec![
+            // Top apex
+            Vertex { position: [0.0, 0.5, 0.0], color },
+            // Middle square
+            Vertex { position: [0.5, 0.0, 0.0], color },
+            Vertex { position: [0.0, 0.0, 0.5], color },
+            Vertex { position: [-0.5, 0.0, 0.0], color },
+            Vertex { position: [0.0, 0.0, -0.5], color },
+            // Bottom apex
+            Vertex { position: [0.0, -0.5, 0.0], color },
+        ];
+
+        let indices = vec![
+            // Top pyramid
+            0, 1, 2,
+            0, 2, 3,
+            0, 3, 4,
+            0, 4, 1,
+            // Bottom pyramid
+            5, 2, 1,
+            5, 3, 2,
+            5, 4, 3,
+            5, 1, 4,
+        ];
+
+        let edge_indices = vec![
+            // Top edges
+            0, 1, 0, 2, 0, 3, 0, 4,
+            // Middle square
+            1, 2, 2, 3, 3, 4, 4, 1,
+            // Bottom edges
+            5, 1, 5, 2, 5, 3, 5, 4,
+        ];
+
+        ShapeGeometry { vertices, indices, edge_indices }
+    }
+
+    fn create_prism(color: [f32; 3]) -> ShapeGeometry {
+        // Triangular prism
+        let vertices = vec![
+            // Top triangle
+            Vertex { position: [0.0, 0.5, 0.4], color },
+            Vertex { position: [-0.4, 0.5, -0.3], color },
+            Vertex { position: [0.4, 0.5, -0.3], color },
+            // Bottom triangle
+            Vertex { position: [0.0, -0.5, 0.4], color },
+            Vertex { position: [-0.4, -0.5, -0.3], color },
+            Vertex { position: [0.4, -0.5, -0.3], color },
+        ];
+
+        let indices = vec![
+            // Top
+            0, 1, 2,
+            // Bottom
+            3, 5, 4,
+            // Sides
+            0, 3, 1, 1, 3, 4,
+            1, 4, 2, 2, 4, 5,
+            2, 5, 0, 0, 5, 3,
+        ];
+
+        let edge_indices = vec![
+            // Top triangle
+            0, 1, 1, 2, 2, 0,
+            // Bottom triangle
+            3, 4, 4, 5, 5, 3,
+            // Vertical edges
+            0, 3, 1, 4, 2, 5,
+        ];
+
+        ShapeGeometry { vertices, indices, edge_indices }
+    }
+
+    fn create_hex_prism(color: [f32; 3]) -> ShapeGeometry {
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+
+        // Create hexagonal top and bottom
+        for i in 0..6 {
+            let angle = i as f32 * std::f32::consts::PI / 3.0;
+            let x = angle.cos() * 0.4;
+            let z = angle.sin() * 0.4;
+
+            // Top vertex
+            vertices.push(Vertex {
+                position: [x, 0.5, z],
+                color,
+            });
+            // Bottom vertex
+            vertices.push(Vertex {
+                position: [x, -0.5, z],
+                color,
+            });
+        }
+
+        // Top center
+        let top_center = vertices.len() as u16;
+        vertices.push(Vertex {
+            position: [0.0, 0.5, 0.0],
+            color,
+        });
+
+        // Bottom center
+        let bottom_center = vertices.len() as u16;
+        vertices.push(Vertex {
+            position: [0.0, -0.5, 0.0],
+            color,
+        });
+
+        // Top cap
+        for i in 0..6 {
+            let next = (i + 1) % 6;
+            indices.push(top_center);
+            indices.push((i * 2) as u16);
+            indices.push((next * 2) as u16);
+        }
+
+        // Bottom cap
+        for i in 0..6 {
+            let next = (i + 1) % 6;
+            indices.push(bottom_center);
+            indices.push((next * 2 + 1) as u16);
+            indices.push((i * 2 + 1) as u16);
+        }
+
+        // Sides
+        for i in 0..6 {
+            let next = (i + 1) % 6;
+            let top1 = (i * 2) as u16;
+            let bottom1 = (i * 2 + 1) as u16;
+            let top2 = (next * 2) as u16;
+            let bottom2 = (next * 2 + 1) as u16;
+
+            indices.push(top1);
+            indices.push(bottom1);
+            indices.push(top2);
+
+            indices.push(top2);
+            indices.push(bottom1);
+            indices.push(bottom2);
+        }
+
+        // Edge indices
+        let mut edge_indices = Vec::new();
+        for i in 0..6 {
+            let next = (i + 1) % 6;
+            let top1 = (i * 2) as u16;
+            let bottom1 = (i * 2 + 1) as u16;
+            let top2 = (next * 2) as u16;
+            let bottom2 = (next * 2 + 1) as u16;
+
+            // Top hexagon
+            edge_indices.push(top1);
+            edge_indices.push(top2);
+
+            // Bottom hexagon
+            edge_indices.push(bottom1);
+            edge_indices.push(bottom2);
+
+            // Vertical edges
+            edge_indices.push(top1);
+            edge_indices.push(bottom1);
+        }
+
+        ShapeGeometry { vertices, indices, edge_indices }
+    }
+
+    fn create_diamond(color: [f32; 3]) -> ShapeGeometry {
+        // Double pyramid (bipyramid)
+        let vertices = vec![
+            // Top apex
+            Vertex { position: [0.0, 0.6, 0.0], color },
+            // Middle square
+            Vertex { position: [0.4, 0.0, 0.0], color },
+            Vertex { position: [0.0, 0.0, 0.4], color },
+            Vertex { position: [-0.4, 0.0, 0.0], color },
+            Vertex { position: [0.0, 0.0, -0.4], color },
+            // Bottom apex
+            Vertex { position: [0.0, -0.6, 0.0], color },
+        ];
+
+        let indices = vec![
+            // Top pyramid
+            0, 1, 2,
+            0, 2, 3,
+            0, 3, 4,
+            0, 4, 1,
+            // Bottom pyramid
+            5, 2, 1,
+            5, 3, 2,
+            5, 4, 3,
+            5, 1, 4,
+        ];
+
+        let edge_indices = vec![
+            // Top edges
+            0, 1, 0, 2, 0, 3, 0, 4,
+            // Middle square
+            1, 2, 2, 3, 3, 4, 4, 1,
+            // Bottom edges
+            5, 1, 5, 2, 5, 3, 5, 4,
+        ];
 
         ShapeGeometry { vertices, indices, edge_indices }
     }
