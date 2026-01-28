@@ -63,5 +63,9 @@ color: #333
 ---
 # Exercise
 
-* Extend driver to support reading sensor value
-* Add periodic sensor polling using embassy-time
+* Extend driver to support reading accelerometer values (starts at OUT_X_L (0x28))
+  * ```rust
+        let mut data = [0u8; 6];
+        i2c.write_read(self.address, &[Register::OUT_X_L.addr() | 0x80], &mut data)
+    ```
+* Add periodic polling  using embassy-time
