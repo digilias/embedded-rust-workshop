@@ -1,6 +1,37 @@
+#![no_std]
+#![no_main]
+
+use embassy_stm32::i2c;
+use embassy_time::Duration;
 use embedded_hal::i2c::I2c;
 
 const ADDRESS: u8 = 0x18;
+
+use {defmt_rtt as _, panic_probe as _};
+
+#[cortex_m_rt::entry]
+fn main() -> ! {
+    let p = embassy_stm32::init(Default::default());
+
+    let mut config = i2c::Config::default();
+    config.timeout = Duration::from_secs(2);
+    let i2c = i2c::I2c::new_blocking(
+        p.I2C1,
+        p.PB8,
+        p.PB9,
+        config,
+    );
+
+    let mut driver = Lis3dh::new(I2cInterface::new(i2c));
+
+    // Use it to read the register
+    match driver.who_am_i().read() {
+        Ok(whoami) => defmt::info!("Whoami: {:?}", whoami.value()),
+        Err(e) => defmt::error!("Driver Error: {:?}", e),
+    }
+    
+    loop {}
+}
 
 struct I2cInterface<I: I2c> {
     i2c: I,

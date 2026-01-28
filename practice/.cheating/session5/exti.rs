@@ -1,36 +1,19 @@
-/// EXTI1 interrupt handler
-#[interrupt]
-fn EXTI1() {
-    // Clear pending bit
-    pac::EXTI.pr(0).write(|w| {
-        w.set_line(1, true);
-    });
+#![no_std]
+#![no_main]
 
-    // Set data ready flag
-    critical_section::with(|cs| {
-        DATA_READY.borrow(cs).set(true);
-    });
-}
+use embassy_stm32::gpio::Input;
+use embassy_stm32::interrupt;
+use embassy_stm32::pac;
 
-/// Check if data is ready (non-blocking)
-pub fn is_data_ready() -> bool {
-    critical_section::with(|cs| {
-        let ready = DATA_READY.borrow(cs).get();
-        if ready {
-            DATA_READY.borrow(cs).set(false); // Clear flag
-        }
-        ready
-    })
-}
+use {defmt_rtt as _, panic_probe as _};
 
-/// Wait for data ready (blocking)
-pub fn wait_for_data_ready() {
-    loop {
-        if is_data_ready() {
-            break;
-        }
-        cortex_m::asm::wfi(); // Sleep until interrupt
-    }
+#[cortex_m_rt::entry]
+fn main() -> ! {
+    let p = embassy_stm32::init(Default::default());
+    let _b = Input::new(p.PC13, embassy_stm32::gpio::Pull::Down);
+
+    setup();
+    loop { }
 }
 
 fn setup() {
@@ -63,7 +46,7 @@ unsafe fn EXTI13() {
     let pin = 13;
     let imr = EXTI.imr(0).read();
     if !imr.line(pin) {
-        defmt::info!("Hello!");
+        defmt::info!("Pressed!");
     }
     EXTI.imr(0).modify(|w| w.set_line(pin, true));
 }

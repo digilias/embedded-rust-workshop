@@ -1,17 +1,75 @@
-// Session 8 Snippet: Async EXTI with ExtiInput
-l
-use defmt::info;
-use embassy_executor::Spawner;
-use embassy_stm32::exti::ExtiInput;
-use embassy_stm32::gpio::{Input, Pull};
+#![no_std]
+#![no_main]
 
-fn main() {
+use embassy_stm32::interrupt;
+use embassy_stm32::pac;
+use core::pin::Pin;
+use embassy_sync::waitqueue::AtomicWaker;
+use core::task::{RawWaker, RawWakerVTable, Waker, Poll, Context};
+use embassy_stm32::gpio::{Input, Pull};
+use {defmt_rtt as _, panic_probe as _};
+
+#[cortex_m_rt::entry]
+fn main() -> ! {
+    let mut executor = SimpleExecutor::new();
+    executor.block_on(async {
+        let p = embassy_stm32::init(Default::default());
+
     let _button = Input::new(p.PC13, Pull::Down);
     loop {
-        let mut fut = ButtonFuture::new();
+        let fut = ButtonFuture::new();
         fut.await;
-        defmt::info!("Hello from main!");
+        defmt::info!("Button pressed!");
     }
+    });
+    loop {}
+}
+pub struct SimpleExecutor {
+    // In a real executor, you'd store tasks in a queue
+    // For simplicity, this example assumes tasks are externally managed
+}
+
+impl SimpleExecutor {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    /// Run a single future to completion
+    pub fn block_on<F: Future>(&mut self, mut future: F) -> F::Output {
+        // Pin the future
+        let mut future = unsafe { Pin::new_unchecked(&mut future) };
+
+        // Create a dummy waker
+        let waker = dummy_waker();
+        let mut context = Context::from_waker(&waker);
+
+        // Poll until ready
+        loop {
+            match future.as_mut().poll(&mut context) {
+                Poll::Ready(output) => return output,
+                Poll::Pending => {
+                    // In a real executor, we'd sleep or wait for events
+                    // For this simple version, we just loop (busy-wait)
+                }
+            }
+        }
+    }
+}
+
+// Dummy waker implementation
+fn dummy_waker() -> Waker {
+    unsafe { Waker::from_raw(dummy_raw_waker()) }
+}
+
+fn dummy_raw_waker() -> RawWaker {
+    fn no_op(_: *const ()) {}
+    fn clone(_: *const ()) -> RawWaker {
+        dummy_raw_waker()
+    }
+
+    static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, no_op, no_op, no_op);
+
+    RawWaker::new(core::ptr::null(), &VTABLE)
 }
 
 struct ButtonFuture;
