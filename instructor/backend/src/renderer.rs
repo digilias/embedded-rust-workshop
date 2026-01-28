@@ -50,7 +50,6 @@ pub enum Shape {
     Pyramid,
     Torus,
     Cylinder,
-    Sphere,
     Cone,
     Octahedron,
     Prism,
@@ -69,7 +68,6 @@ impl Shape {
             1 => Shape::Pyramid,
             2 => Shape::Torus,
             3 => Shape::Cylinder,
-            4 => Shape::Sphere,
             5 => Shape::Cone,
             6 => Shape::Octahedron,
             7 => Shape::Prism,
@@ -85,7 +83,6 @@ impl Shape {
             Shape::Pyramid => [0.2, 0.6, 0.2],    // Dark green
             Shape::Torus => [0.2, 0.2, 0.7],      // Dark blue
             Shape::Cylinder => [0.6, 0.6, 0.2],   // Dark yellow
-            Shape::Sphere => [0.6, 0.2, 0.6],     // Dark magenta
             Shape::Cone => [0.2, 0.6, 0.6],       // Dark cyan
             Shape::Octahedron => [0.7, 0.4, 0.2], // Dark orange
             Shape::Prism => [0.4, 0.2, 0.6],      // Dark purple
@@ -337,7 +334,7 @@ impl Renderer {
         // Add all shapes
         for shape_type in &[
             Shape::Cube, Shape::Pyramid, Shape::Torus, Shape::Cylinder,
-            Shape::Sphere, Shape::Cone, Shape::Octahedron, Shape::Prism,
+            Shape::Cone, Shape::Octahedron, Shape::Prism,
             Shape::HexPrism, Shape::Diamond,
         ] {
             let geometry = Self::create_shape_geometry(shape_type);
@@ -437,7 +434,6 @@ impl Renderer {
             Shape::Pyramid => Self::create_pyramid(color),
             Shape::Torus => Self::create_torus(16, 8, 0.5, 0.2, color),
             Shape::Cylinder => Self::create_cylinder(16, color),
-            Shape::Sphere => Self::create_sphere(16, 12, color),
             Shape::Cone => Self::create_cone(16, color),
             Shape::Octahedron => Self::create_octahedron(color),
             Shape::Prism => Self::create_prism(color),
