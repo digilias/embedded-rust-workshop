@@ -15,14 +15,14 @@ fn main() -> ! {
         defmt::info!("high");
         led.set_high();
 
-        for _i in 0..1000000{
+        for _i in 0..10000000 {
             cortex_m::asm::nop();
         }
 
         defmt::info!("low");
         led.set_low();
 
-        for _i in 0..1000000{
+        for _i in 0..10000000 {
             cortex_m::asm::nop();
         }
     }
