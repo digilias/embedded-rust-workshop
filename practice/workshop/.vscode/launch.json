@@ -9,9 +9,10 @@
             "request": "launch",
             "name": "probe-rs Test",
             "cwd": "${workspaceFolder}",
-            "connectUnderReset": true,
+            "connectUnderReset": false,
             "chip": "STM32H563ZITx",
-            "preLaunchTask": "cargo build --release",
+            "preLaunchTask": "build release",
+            // "preLaunchTask": "build",
             "flashingConfig": {
                 "flashingEnabled": true,
                 "haltAfterReset": true
